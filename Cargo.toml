@@ -1,0 +1,21 @@
+[package]
+name = "grimstabot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.93"
+chrono = "0.4.38"
+dotenvy = "0.15.7"
+itertools = "0.13.0"
+rand = "0.8.5"
+reqwest = { version = "0.12.9", features = ["json"] }
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
+serenity = { version = "0.12.4", features = ["chrono"] }
+tempfile = "3.14.0"
+tokio = { version = "1.42.0", features = ["full"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+convert_case = "0.8.0"
+sqlx = { version = "0.8.3", features = ["sqlite", "runtime-tokio", "chrono"] }
