@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO product_reports \n            (report_id, name, manufacturer_name, price, comparative_price, comparative_price_text, url, store)\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "485392903d2c7c5aebe4f5b9a2ecdc0aedc40c9178f0b10356358f5efb1a7238"
+}
