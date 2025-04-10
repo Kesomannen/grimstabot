@@ -1,27 +1,21 @@
 use std::cmp::Ordering;
 
 use anyhow::{bail, Result};
-use chrono::Local;
+use chrono::Utc;
 use convert_case::{Case, Casing};
 use itertools::Itertools;
 
+use crate::Db;
+
 mod coop;
+pub mod plot;
 
 #[derive(Debug)]
 pub struct Ingredient {
+    pub id: i64,
     pub name: String,
-    pub category_id: u32,
     pub amount: f64,
-}
-
-impl Ingredient {
-    fn new(name: &'static str, category_id: u32, amount: f64) -> Self {
-        Ingredient {
-            name: name.into(),
-            category_id,
-            amount,
-        }
-    }
+    pub coop_id: i64,
 }
 
 #[derive(Debug)]
@@ -29,33 +23,34 @@ pub struct Product {
     pub ingredient: Ingredient,
     pub name: String,
     pub manufacturer_name: String,
-    pub price: f64,
     pub comparative_price: f64,
     pub comparative_price_text: String,
     pub url: String,
 }
 
-pub async fn get_products() -> Result<Vec<Product>> {
+impl Product {
+    pub fn price(&self) -> f64 {
+        self.comparative_price * self.ingredient.amount
+    }
+}
+
+pub async fn get_products(db: &Db) -> Result<Vec<Product>> {
     let http = reqwest::Client::builder()
         .user_agent(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0",
         )
         .build()?;
 
-    let ingredients = vec![
-        Ingredient::new("Ägg", 334710, 8.),
-        Ingredient::new("Vetemjöl", 47876, 0.5),
-        Ingredient::new("Strösocker", 334547, 0.85),
-        Ingredient::new("Kakao", 334550, 0.125),
-        Ingredient::new("Smör", 334720, 0.4),
-    ];
+    let ingredients = sqlx::query_as!(Ingredient, "SELECT * FROM ingredients")
+        .fetch_all(db)
+        .await?;
 
     let mut result: Vec<Product> = Vec::new();
 
     for ingredient in ingredients {
         let products = coop::get_products(
             &http,
-            ingredient.category_id,
+            ingredient.coop_id as u32,
             10,
             vec![coop::SortBy {
                 order: coop::SortOrder::Descending,
@@ -76,8 +71,6 @@ pub async fn get_products() -> Result<Vec<Product>> {
         else {
             bail!("failed to find a product for {}", ingredient.name)
         };
-
-        let price = product.comparative_price * ingredient.amount;
 
         let mut categories = Vec::new();
         let mut category = product.nav_categories.into_iter().next().unwrap();
@@ -111,7 +104,6 @@ pub async fn get_products() -> Result<Vec<Product>> {
             ingredient,
             name,
             manufacturer_name,
-            price,
             comparative_price,
             comparative_price_text,
             url,
@@ -122,14 +114,14 @@ pub async fn get_products() -> Result<Vec<Product>> {
 }
 
 pub fn create_embed(products: &[Product]) -> serenity::all::CreateEmbed {
-    let total_price: f64 = products.iter().map(|product| product.price).sum();
+    let total_price: f64 = products.iter().map(|product| product.price()).sum();
 
     let fields = products
         .iter()
-        .sorted_by(|a, b| a.price.total_cmp(&b.price).reverse())
+        .sorted_by(|a, b| a.price().total_cmp(&b.price()).reverse())
         .map(|product| {
             (
-                format!("{} `{:0.1}kr`", product.ingredient.name, product.price),
+                format!("{} `{:0.1}kr`", product.ingredient.name, product.price()),
                 format!(
                     "[{} {}]({}) ({}{})",
                     product.manufacturer_name,
@@ -146,8 +138,8 @@ pub fn create_embed(products: &[Product]) -> serenity::all::CreateEmbed {
         .title(format!("📈 Håkanbörsen 📈"))
         .color(serenity::all::Color::DARK_GREEN)
         .description(format!(
-            "{}\n# `{total_price:0.3}kr`",
-            Local::now().format("%Y-%m-%d %H:%M:%S")
+            "<t:{}>\n# `{total_price:0.3}kr`",
+            Utc::now().timestamp()
         ))
         .fields(fields)
 }

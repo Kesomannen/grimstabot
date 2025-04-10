@@ -3,21 +3,25 @@ use std::sync::Arc;
 use chrono::{Local, Timelike};
 use hakan::Product;
 use serenity::{
-    all::{ChannelId, Command, Context, CreateMessage, EventHandler, Http, Interaction, Ready},
+    all::{
+        ChannelId, Command, Context, CreateMessage, EventHandler, Http, Interaction, Ready, RoleId,
+    },
     async_trait,
 };
 use tokio::time::Instant;
 use tracing::{error, info};
 
 mod commands;
-mod hakan;
+pub mod hakan;
+
+type Db = sqlx::SqlitePool;
 
 pub struct Bot {
-    db: sqlx::SqlitePool,
+    db: Db,
 }
 
 impl Bot {
-    pub fn new(db: sqlx::SqlitePool) -> Self {
+    pub fn new(db: Db) -> Self {
         Self { db }
     }
 }
@@ -31,24 +35,28 @@ impl EventHandler for Bot {
             error!("failed to register command: {err}");
         }
 
-        let channel_id = ChannelId::new(1359621010726326432);
         let http = ctx.http.clone();
         let db = self.db.clone();
-        tokio::spawn(loop_task(channel_id, http, db));
+        send_hakan_update(&http, &db).await.unwrap();
 
-        info!("logged in as {}", ready.user.name);
+        tokio::spawn(loop_task(http, db));
+
+        info!(username = ready.user.name, "ready");
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
-            if let Err(err) = commands::hakan::run(&ctx, command).await {
+            if let Err(err) = commands::hakan::run(command, &ctx, &self.db).await {
                 error!("failed to handle command: {err}");
             }
         }
     }
 }
 
-async fn loop_task(channel: ChannelId, http: Arc<Http>, db: sqlx::SqlitePool) {
+const UPDATE_CHANNEL: ChannelId = ChannelId::new(1359621010726326432);
+const UPDATE_PING_ROLE: RoleId = RoleId::new(1359807749780930570);
+
+async fn loop_task(http: Arc<Http>, db: sqlx::SqlitePool) {
     loop {
         let now = Local::now();
         let next_9am = if now.hour() < 9 {
@@ -63,19 +71,15 @@ async fn loop_task(channel: ChannelId, http: Arc<Http>, db: sqlx::SqlitePool) {
         let duration_until = (next_9am - now.naive_local()).to_std().unwrap();
         tokio::time::sleep_until(Instant::now() + duration_until).await;
 
-        if let Err(err) = send_hakan_update(channel, &http, &db).await {
+        if let Err(err) = send_hakan_update(&http, &db).await {
             error!("failed to send hakan update: {err:#}");
         }
     }
 }
 
 #[tracing::instrument]
-async fn send_hakan_update(
-    channel: ChannelId,
-    http: &Http,
-    db: &sqlx::SqlitePool,
-) -> anyhow::Result<()> {
-    let products = hakan::get_products().await?;
+async fn send_hakan_update(http: &Http, db: &sqlx::SqlitePool) -> anyhow::Result<()> {
+    let products = hakan::get_products(db).await?;
 
     let mut tx = db.begin().await?;
 
@@ -87,21 +91,21 @@ async fn send_hakan_update(
         let Product {
             name,
             manufacturer_name,
-            price,
             comparative_price,
             comparative_price_text,
             url,
+            ingredient,
             ..
         } = product;
 
         sqlx::query!(
-            "INSERT INTO product_reports 
-            (report_id, name, manufacturer_name, price, comparative_price, comparative_price_text, url, store)
+            "INSERT INTO products 
+            (report_id, ingredient_id, name, manufacturer_name, comparative_price, comparative_price_text, url, store)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
             report.id,
+            ingredient.id,
             name,
             manufacturer_name,
-            price,
             comparative_price,
             comparative_price_text,
             url,
@@ -115,8 +119,13 @@ async fn send_hakan_update(
 
     let embed = hakan::create_embed(&products);
 
-    channel
-        .send_message(http, CreateMessage::new().add_embed(embed))
+    UPDATE_CHANNEL
+        .send_message(
+            http,
+            CreateMessage::new()
+                .content(format!("<@&{UPDATE_PING_ROLE}>"))
+                .add_embed(embed),
+        )
         .await?;
 
     Ok(())

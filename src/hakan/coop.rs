@@ -238,11 +238,11 @@ pub async fn get_products(
         .text()
         .await?;
 
-    tokio::fs::write(
-        format!(r"C:\Users\bobbo\Documents\coop_{}.json", category),
-        &text,
-    )
-    .await?;
+    //tokio::fs::write(
+    //    format!(r"C:\Users\bobbo\Documents\coop_{}.json", category),
+    //    &text,
+    //)
+    //.await?;
 
     let res: Response = serde_json::from_str(&text)?;
 

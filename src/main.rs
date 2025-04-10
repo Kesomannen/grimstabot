@@ -23,22 +23,18 @@ async fn main() {
 
     info!(db_url, "connecting to database");
 
-    let pool = SqlitePool::connect_with(options)
+    let db = SqlitePool::connect_with(options)
         .await
         .expect("failed to connect to database");
 
     sqlx::migrate!()
-        .run(&pool)
+        .run(&db)
         .await
         .expect("failed to run database migrations");
 
-    let res = sqlx::query!("SELECT * FROM product_reports")
-        .fetch_all(&pool)
-        .await
-        .unwrap();
-    dbg!(&res);
+    grimstabot::hakan::plot::plot(&db).await.unwrap();
 
-    let bot = grimstabot::Bot::new(pool);
+    let bot = grimstabot::Bot::new(db);
 
     let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN must be set");
     let intents = GatewayIntents::non_privileged();
