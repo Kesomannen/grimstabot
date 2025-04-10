@@ -5,13 +5,13 @@ use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous},
     SqlitePool,
 };
-use tracing::info;
+use tracing::{info, level_filters::LevelFilter};
 
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
 
-    tracing_subscriber::fmt().compact().init();
+    tracing_subscriber::fmt().init();
 
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
@@ -32,9 +32,14 @@ async fn main() {
         .await
         .expect("failed to run database migrations");
 
-    grimstabot::hakan::plot::plot(&db).await.unwrap();
+    let s3 = s3::Bucket::new(
+        "mod-platform",
+        s3::Region::DoFra1,
+        s3::creds::Credentials::from_env().expect("failed to create s3 credentials"),
+    )
+    .expect("failed to connect to s3 bucket");
 
-    let bot = grimstabot::Bot::new(db);
+    let bot = grimstabot::Bot::new(db, *s3);
 
     let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN must be set");
     let intents = GatewayIntents::non_privileged();
