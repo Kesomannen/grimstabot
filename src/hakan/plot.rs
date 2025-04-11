@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    fmt::Display,
     path::{Path, PathBuf},
 };
 
@@ -8,7 +7,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use http::{HeaderMap, HeaderValue};
 use itertools::Itertools;
-use plotters::{coord::Shift, prelude::*, style::full_palette::ORANGE};
+use plotters::prelude::*;
 use uuid::Uuid;
 
 use crate::AppState;
