@@ -1,14 +1,12 @@
-use std::cmp::Ordering;
-
-use anyhow::{bail, Result};
+use anyhow::Result;
 use chrono::Utc;
-use convert_case::{Case, Casing};
 use itertools::Itertools;
 
-use crate::Db;
+use crate::AppState;
 
 mod coop;
 pub mod plot;
+pub mod update;
 
 #[derive(Debug)]
 pub struct Ingredient {
@@ -34,63 +32,17 @@ impl Product {
     }
 }
 
-pub async fn get_products(db: &Db) -> Result<Vec<Product>> {
-    let http = reqwest::Client::builder()
-        .user_agent(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0",
-        )
-        .build()?;
-
+pub async fn get_products(state: &AppState) -> Result<Vec<Product>> {
     let ingredients = sqlx::query_as!(Ingredient, "SELECT * FROM ingredients")
-        .fetch_all(db)
+        .fetch_all(&state.db)
         .await?;
 
     let mut result: Vec<Product> = Vec::new();
 
     for ingredient in ingredients {
-        let products = coop::get_products(
-            &http,
-            ingredient.coop_id as u32,
-            10,
-            vec![coop::SortBy {
-                order: coop::SortOrder::Descending,
-                attribute_name: "popularity".into(),
-            }],
-        )
-        .await?;
+        let product = coop::get_cheapest_product(state, &ingredient).await?;
 
-        let Some(product) = products
-            .into_iter()
-            .filter(|product| product.name.starts_with(&ingredient.name))
-            .sorted_by(|a, b| {
-                a.comparative_price
-                    .partial_cmp(&b.comparative_price)
-                    .unwrap_or(Ordering::Equal)
-            })
-            .next()
-        else {
-            bail!("failed to find a product for {}", ingredient.name)
-        };
-
-        let mut categories = Vec::new();
-        let mut category = product.nav_categories.into_iter().next().unwrap();
-        loop {
-            categories.push(category.name);
-            match category.super_categories.into_iter().next() {
-                Some(cat) => category = cat,
-                None => break,
-            }
-        }
-
-        let mut url = "https://coop.se/handla/varor/".to_string();
-        for category in categories.into_iter().rev() {
-            url.push_str(&category.replace('&', "").to_case(Case::Kebab));
-            url.push('/');
-        }
-
-        url.push_str(&product.name.to_case(Case::Kebab));
-        url.push('-');
-        url.push_str(&product.id.to_string());
+        let url = product.url();
 
         let coop::Product {
             name,

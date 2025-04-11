@@ -1,68 +1,44 @@
 use std::path::PathBuf;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
+use chrono::NaiveDateTime;
 use plotters::prelude::*;
 use uuid::Uuid;
 
-use crate::Db;
+use crate::AppState;
 
-pub async fn plot(db: &Db) -> Result<PathBuf> {
+pub async fn plot(state: &AppState) -> Result<PathBuf> {
     let uuid = Uuid::new_v4().to_string();
-    let path = PathBuf::from(r"C:\Users\bobbo\Documents\Projects\Rust\grimstabot\plots")
-        .join(uuid)
-        .with_extension("png");
+    let dir = std::env::var("PLOTS_DIRECTORY").context("PLOTS_DIRECTORY must be set")?;
+    let path = PathBuf::from(dir).join(uuid).with_extension("png");
 
-    let path_2 = path.clone();
+    let reports = fetch_reports(state).await?;
 
-    let records = sqlx::query!(
-        r"
-        WITH p AS (
-            SELECT 
-            products.report_id,
-            (products.comparative_price * ingredients.amount) price
-            FROM products
-            JOIN ingredients
-            ON ingredients.id = products.ingredient_id
-            )
-            SELECT
-            reports.id,
-            reports.created_at,
-            SUM(p.price) price
-            FROM reports
-            JOIN p 
-            ON p.report_id = reports.id
-            GROUP BY reports.id
-            ORDER BY created_at ASC",
-    )
-    .fetch_all(db)
-    .await?;
-
-    //dbg!(&records);
-
-    if records.is_empty() {
+    if reports.is_empty() {
         bail!("no records in time range");
     }
 
-    let last = records.iter().last().unwrap();
+    let last = reports.iter().last().unwrap();
 
-    let start_date = records[0].created_at.and_utc();
+    let start_date = reports[0].created_at.and_utc();
     let end_date = last.created_at.and_utc();
 
-    let min_price = records
+    let min_price = reports
         .iter()
         .map(|record| record.price)
         .fold(f64::INFINITY, |a, b| a.min(b));
-    let max_price = records
+    let max_price = reports
         .iter()
         .map(|record| record.price)
         .fold(f64::NEG_INFINITY, |a, b| a.max(b));
 
-    let color = if records[0].price > last.price {
+    let color = if reports[0].price > last.price {
         GREEN
     } else {
         RED
     };
 
+    let path_2 = path.clone();
     let root = BitMapBackend::new(&path_2, (800, 600)).into_drawing_area();
 
     root.fill(&WHITE)?;
@@ -83,7 +59,7 @@ pub async fn plot(db: &Db) -> Result<PathBuf> {
 
     chart.draw_series(
         LineSeries::new(
-            records
+            reports
                 .iter()
                 .map(|record| (record.created_at.and_utc(), record.price)),
             color,
@@ -93,4 +69,35 @@ pub async fn plot(db: &Db) -> Result<PathBuf> {
 
     root.present()?;
     Ok(path)
+}
+
+struct Report {
+    created_at: NaiveDateTime,
+    price: f64,
+}
+
+async fn fetch_reports(state: &AppState) -> Result<Vec<Report>> {
+    let records = sqlx::query_as!(
+        Report,
+        r"WITH p AS (
+            SELECT 
+                products.report_id,
+                (products.comparative_price * ingredients.amount) price
+            FROM products
+            JOIN ingredients
+            ON ingredients.id = products.ingredient_id
+        )
+        SELECT
+            reports.created_at,
+            SUM(p.price) price
+        FROM reports
+        JOIN p 
+            ON p.report_id = reports.id
+        GROUP BY reports.created_at
+        ORDER BY created_at ASC",
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    Ok(records)
 }

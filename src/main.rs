@@ -5,7 +5,7 @@ use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous},
     SqlitePool,
 };
-use tracing::{info, level_filters::LevelFilter};
+use tracing::info;
 
 #[tokio::main]
 async fn main() {
@@ -39,7 +39,10 @@ async fn main() {
     )
     .expect("failed to connect to s3 bucket");
 
-    let bot = grimstabot::Bot::new(db, *s3);
+    let http = reqwest::Client::new();
+
+    let state = grimstabot::AppState::new(db, *s3, http);
+    let bot = grimstabot::Bot::new(state);
 
     let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN must be set");
     let intents = GatewayIntents::non_privileged();

@@ -1,5 +1,13 @@
-use anyhow::Result;
+use std::cmp::Ordering;
+
+use anyhow::{anyhow, Result};
+use convert_case::{Case, Casing};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+
+use crate::AppState;
+
+use super::Ingredient;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Response {
@@ -238,13 +246,55 @@ pub async fn get_products(
         .text()
         .await?;
 
-    //tokio::fs::write(
-    //    format!(r"C:\Users\bobbo\Documents\coop_{}.json", category),
-    //    &text,
-    //)
-    //.await?;
-
     let res: Response = serde_json::from_str(&text)?;
 
     Ok(res.results.items)
+}
+
+pub async fn get_cheapest_product(state: &AppState, ingredient: &Ingredient) -> Result<Product> {
+    get_products(
+        &state.http,
+        ingredient.coop_id as u32,
+        10,
+        vec![SortBy {
+            order: SortOrder::Descending,
+            attribute_name: "popularity".into(),
+        }],
+    )
+    .await?
+    .into_iter()
+    .filter(|product| product.name.starts_with(&ingredient.name))
+    .sorted_by(|a, b| {
+        a.comparative_price
+            .partial_cmp(&b.comparative_price)
+            .unwrap_or(Ordering::Equal)
+    })
+    .next()
+    .ok_or_else(|| anyhow!("failed to find product"))
+}
+
+impl Product {
+    pub fn url(&self) -> String {
+        let mut categories = Vec::new();
+        let mut current = self.nav_categories.iter().next().unwrap();
+        loop {
+            categories.push(&current.name);
+            match current.super_categories.iter().next() {
+                Some(cat) => current = &cat,
+                None => break,
+            }
+        }
+
+        let mut url = "https://coop.se/handla/varor/".to_string();
+        for category in categories.into_iter().rev() {
+            url.push_str(&category.replace('&', "").to_case(Case::Kebab));
+            url.push('/');
+        }
+
+        url.push_str(&self.name.to_case(Case::Kebab));
+        url.push('-');
+        url.push_str(&self.id.to_string());
+
+        url
+    }
 }

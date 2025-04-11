@@ -3,7 +3,7 @@ use serenity::all::{
     CreateInteractionResponseMessage, InstallationContext,
 };
 
-use crate::Db;
+use crate::AppState;
 
 pub fn register() -> CreateCommand {
     CreateCommand::new("håkan")
@@ -11,8 +11,12 @@ pub fn register() -> CreateCommand {
         .add_integration_type(InstallationContext::User)
 }
 
-pub async fn run(interaction: CommandInteraction, ctx: &Context, db: &Db) -> anyhow::Result<()> {
-    let products = crate::hakan::get_products(db).await?;
+pub async fn run(
+    interaction: CommandInteraction,
+    ctx: &Context,
+    state: &AppState,
+) -> anyhow::Result<()> {
+    let products = crate::hakan::get_products(state).await?;
     let embed = crate::hakan::create_embed(&products);
 
     let msg = CreateInteractionResponseMessage::new().embed(embed);
