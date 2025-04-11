@@ -1,5 +1,6 @@
 use std::{env, str::FromStr};
 
+use grimstabot::hakan;
 use serenity::all::GatewayIntents;
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous},
@@ -39,9 +40,19 @@ async fn main() {
     )
     .expect("failed to connect to s3 bucket");
 
-    let http = reqwest::Client::new();
+    let http = reqwest::Client::builder()
+        .user_agent(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0",
+        )
+        .build()
+        .expect("failed to build reqwest");
 
     let state = grimstabot::AppState::new(db, *s3, http);
+
+    //let report = hakan::create_report(&state).await.unwrap();
+    //hakan::save_report(&report, &state).await.unwrap();
+    //hakan::plot::create(&state).await.unwrap();
+
     let bot = grimstabot::Bot::new(state);
 
     let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN must be set");

@@ -1,8 +1,5 @@
-use std::cmp::Ordering;
-
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use convert_case::{Case, Casing};
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;
@@ -216,7 +213,7 @@ pub enum SortOrder {
 
 const API_KEY: &str = "3becf0ce306f41a1ae94077c16798187";
 
-async fn get_products(
+async fn get_products_raw(
     http: &reqwest::Client,
     category: u32,
     count: u32,
@@ -251,8 +248,11 @@ async fn get_products(
     Ok(res.results.items)
 }
 
-pub async fn get_cheapest_product(ingredient: &Ingredient, state: &AppState) -> Result<Product> {
-    get_products(
+pub async fn get_products(
+    ingredient: &Ingredient,
+    state: &AppState,
+) -> Result<impl Iterator<Item = super::Product>> {
+    Ok(get_products_raw(
         &state.http,
         ingredient.coop_id as u32,
         10,
@@ -263,14 +263,7 @@ pub async fn get_cheapest_product(ingredient: &Ingredient, state: &AppState) -> 
     )
     .await?
     .into_iter()
-    .filter(|product| product.name.starts_with(&ingredient.name))
-    .sorted_by(|a, b| {
-        a.comparative_price
-            .partial_cmp(&b.comparative_price)
-            .unwrap_or(Ordering::Equal)
-    })
-    .next()
-    .ok_or_else(|| anyhow!("failed to find product"))
+    .map(|product| super::Product::from(product)))
 }
 
 impl Product {

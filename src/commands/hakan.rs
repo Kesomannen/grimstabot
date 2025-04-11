@@ -1,9 +1,9 @@
 use serenity::all::{
-    CommandInteraction, Context, CreateCommand, CreateInteractionResponse,
-    CreateInteractionResponseMessage, InstallationContext,
+    CommandInteraction, Context, CreateCommand, CreateEmbed, EditInteractionResponse,
+    InstallationContext,
 };
 
-use crate::AppState;
+use crate::{hakan, AppState};
 
 pub fn register() -> CreateCommand {
     CreateCommand::new("håkan")
@@ -16,13 +16,18 @@ pub async fn run(
     ctx: &Context,
     state: &AppState,
 ) -> anyhow::Result<()> {
-    let report = crate::hakan::create_report(state).await?;
-    let embed = crate::hakan::create_embed(&report);
+    interaction.defer(&ctx.http).await?;
 
-    let msg = CreateInteractionResponseMessage::new().embed(embed);
-    let response = CreateInteractionResponse::Message(msg);
+    //let report = hakan::create_report(state).await?;
 
-    interaction.create_response(&ctx.http, response).await?;
+    let plot_path = hakan::plot::create_by_store(state).await?;
+    let plot_url = hakan::plot::upload(&plot_path, state).await?;
+
+    let embed = CreateEmbed::new().image(plot_url);
+
+    let response = EditInteractionResponse::new().add_embed(embed);
+
+    interaction.edit_response(&ctx.http, response).await?;
 
     Ok(())
 }

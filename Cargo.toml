@@ -23,6 +23,7 @@ plotters = "0.3.7"
 uuid = { version = "1.16.0", features = ["serde", "v4"] }
 rust-s3 = "0.35.1"
 http = "0.2"
+scraper = "0.23.1"
 
 [profile.release]
 panic = "abort"   # Strip expensive panic clean-up logic

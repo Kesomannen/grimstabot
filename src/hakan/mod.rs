@@ -1,12 +1,14 @@
-use std::{collections::HashMap, future::Future};
+use std::{cmp::Ordering, collections::HashMap, fmt::Display, future::Future};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::Utc;
 use itertools::Itertools;
+use uuid::Uuid;
 
 use crate::AppState;
 
 mod coop;
+mod ica;
 pub mod plot;
 pub mod update;
 
@@ -16,6 +18,7 @@ pub struct Ingredient {
     pub name: String,
     pub amount: f64,
     pub coop_id: i64,
+    pub ica_category_name: String,
 }
 
 #[derive(Debug)]
@@ -36,12 +39,23 @@ impl Product {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Store {
     Coop,
+    Ica,
+}
+
+impl Display for Store {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Store::Coop => write!(f, "Coop"),
+            Store::Ica => write!(f, "ICA"),
+        }
+    }
 }
 
 impl Store {
-    pub fn as_str(&self) -> &'static str {
+    pub fn id(&self) -> &'static str {
         match self {
             Store::Coop => "coop",
+            Store::Ica => "ica",
         }
     }
 }
@@ -80,12 +94,14 @@ pub async fn create_report(state: &AppState) -> Result<Report> {
 
     let mut stores = HashMap::new();
 
-    let store_reporters = [(Store::Coop, coop::get_cheapest_product)];
-
-    for (store, reporter) in store_reporters {
-        let products = create_store_report(reporter, &ingredients, state).await?;
-        stores.insert(store, products);
-    }
+    stores.insert(
+        Store::Coop,
+        create_store_report(coop::get_products, &ingredients, state).await?,
+    );
+    stores.insert(
+        Store::Ica,
+        create_store_report(ica::get_products, &ingredients, state).await?,
+    );
 
     let ingredients = ingredients
         .into_iter()
@@ -108,12 +124,22 @@ async fn create_store_report<'a, F, R, Fut>(
 where
     F: Fn(&'a Ingredient, &'a AppState) -> Fut,
     Fut: Future<Output = Result<R>>,
-    R: Into<Product>,
+    R: Iterator<Item = Product>,
 {
     let mut result = HashMap::new();
     for ingredient in ingredients {
-        let product = reporter(ingredient, state).await?;
-        result.insert(ingredient.id, product.into());
+        let product = reporter(ingredient, state)
+            .await?
+            .filter(|product| product.name.starts_with(&ingredient.name))
+            .sorted_by(|a, b| {
+                a.comparative_price
+                    .partial_cmp(&b.comparative_price)
+                    .unwrap_or(Ordering::Equal)
+            })
+            .next()
+            .ok_or_else(|| anyhow!("no products found"))?;
+
+        result.insert(ingredient.id, product);
     }
     Ok(result)
 }
@@ -135,7 +161,7 @@ pub fn create_embed(report: &Report) -> serenity::all::CreateEmbed {
                 format!("{} `{:0.1}kr`", ingredient.name, price),
                 format!(
                     "{} [{} {}]({}) ({}{})",
-                    store.as_str(),
+                    store,
                     product.manufacturer_name,
                     product.name,
                     product.url,
@@ -154,4 +180,48 @@ pub fn create_embed(report: &Report) -> serenity::all::CreateEmbed {
             Utc::now().timestamp()
         ))
         .fields(fields)
+}
+
+pub async fn save_report(report: &Report, state: &AppState) -> Result<()> {
+    let mut tx = state.db.begin().await?;
+
+    let report_id = sqlx::query!("INSERT INTO reports DEFAULT VALUES RETURNING id")
+        .fetch_one(&mut *tx)
+        .await?
+        .id;
+
+    for (store, products) in &report.stores {
+        for (ingredient_id, product) in products {
+            let Product {
+                name,
+                manufacturer_name,
+                comparative_price,
+                comparative_price_text,
+                url,
+                ..
+            } = product;
+
+            let store_name = store.id();
+
+            sqlx::query!(
+                "INSERT INTO products 
+                (report_id, ingredient_id, name, manufacturer_name, comparative_price, comparative_price_text, url, store)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                report_id,
+                ingredient_id,
+                name,
+                manufacturer_name,
+                comparative_price,
+                comparative_price_text,
+                url,
+                store_name
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+
+    tx.commit().await?;
+
+    Ok(())
 }
