@@ -1,24 +1,23 @@
 use std::path::Path;
 
 use anyhow::Result;
-use http::{HeaderMap, HeaderValue};
 use serenity::all::{ChannelId, CreateMessage, Http, RoleId};
 
 use crate::AppState;
 
-use super::Product;
+use super::{Product, Report};
 
 const UPDATE_CHANNEL: ChannelId = ChannelId::new(1359621010726326432);
 const UPDATE_PING_ROLE: RoleId = RoleId::new(1359807749780930570);
 
 #[tracing::instrument]
 pub async fn send(http: &Http, state: &AppState) -> Result<()> {
-    let products = super::get_products(state).await?;
+    let report = super::create_report(state).await?;
 
-    insert_report(&products, state).await?;
+    insert_report(&report, state).await?;
 
-    let plot_path = super::plot::plot(state).await?;
-    let url = upload_plot(&plot_path, state).await?;
+    let plot_path = super::plot::create(state).await?;
+    let url = super::plot::upload(&plot_path, state).await?;
 
     let embed = super::create_embed(&products).image(url);
 
@@ -36,7 +35,7 @@ pub async fn send(http: &Http, state: &AppState) -> Result<()> {
     Ok(())
 }
 
-async fn insert_report(products: &[Product], state: &AppState) -> Result<()> {
+async fn insert_report(report: &Report, state: &AppState) -> Result<()> {
     let mut tx = state.db.begin().await?;
 
     let report = sqlx::query!("INSERT INTO reports DEFAULT VALUES RETURNING id")
@@ -74,23 +73,4 @@ async fn insert_report(products: &[Product], state: &AppState) -> Result<()> {
     tx.commit().await?;
 
     Ok(())
-}
-
-async fn upload_plot(path: &Path, state: &AppState) -> Result<String> {
-    let file_name = path.file_name().unwrap().to_string_lossy();
-    let storage_path = format!("plots/{file_name}");
-    let mut reader = tokio::fs::File::open(path).await?;
-
-    let mut headers = HeaderMap::new();
-    headers.insert("x-amz-acl", HeaderValue::from_static("public-read"));
-
-    state
-        .s3
-        .with_extra_headers(headers)
-        .unwrap()
-        .put_object_stream_with_content_type(&mut reader, &storage_path, "image/png")
-        .await?;
-
-    let url = format!("https://mod-platform.fra1.cdn.digitaloceanspaces.com/{storage_path}");
-    Ok(url)
 }

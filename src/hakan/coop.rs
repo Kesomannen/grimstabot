@@ -216,7 +216,7 @@ pub enum SortOrder {
 
 const API_KEY: &str = "3becf0ce306f41a1ae94077c16798187";
 
-pub async fn get_products(
+async fn get_products(
     http: &reqwest::Client,
     category: u32,
     count: u32,
@@ -251,7 +251,7 @@ pub async fn get_products(
     Ok(res.results.items)
 }
 
-pub async fn get_cheapest_product(state: &AppState, ingredient: &Ingredient) -> Result<Product> {
+pub async fn get_cheapest_product(ingredient: &Ingredient, state: &AppState) -> Result<Product> {
     get_products(
         &state.http,
         ingredient.coop_id as u32,
@@ -274,7 +274,7 @@ pub async fn get_cheapest_product(state: &AppState, ingredient: &Ingredient) -> 
 }
 
 impl Product {
-    pub fn url(&self) -> String {
+    fn url(&self) -> String {
         let mut categories = Vec::new();
         let mut current = self.nav_categories.iter().next().unwrap();
         loop {
@@ -296,5 +296,18 @@ impl Product {
         url.push_str(&self.id.to_string());
 
         url
+    }
+}
+
+impl From<Product> for super::Product {
+    fn from(value: Product) -> Self {
+        let url = value.url();
+        super::Product {
+            name: value.name,
+            manufacturer_name: value.manufacturer_name,
+            comparative_price: value.comparative_price,
+            comparative_price_text: value.comparative_price_text,
+            url,
+        }
     }
 }

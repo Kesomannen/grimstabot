@@ -1,13 +1,14 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 use chrono::NaiveDateTime;
+use http::{HeaderMap, HeaderValue};
 use plotters::prelude::*;
 use uuid::Uuid;
 
 use crate::AppState;
 
-pub async fn plot(state: &AppState) -> Result<PathBuf> {
+pub async fn create(state: &AppState) -> Result<PathBuf> {
     let uuid = Uuid::new_v4().to_string();
     let dir = std::env::var("PLOTS_DIRECTORY").context("PLOTS_DIRECTORY must be set")?;
     let path = PathBuf::from(dir).join(uuid).with_extension("png");
@@ -100,4 +101,23 @@ async fn fetch_reports(state: &AppState) -> Result<Vec<Report>> {
     .await?;
 
     Ok(records)
+}
+
+pub async fn upload(path: &Path, state: &AppState) -> Result<String> {
+    let file_name = path.file_name().unwrap().to_string_lossy();
+    let storage_path = format!("plots/{file_name}");
+    let mut reader = tokio::fs::File::open(path).await?;
+
+    let mut headers = HeaderMap::new();
+    headers.insert("x-amz-acl", HeaderValue::from_static("public-read"));
+
+    state
+        .s3
+        .with_extra_headers(headers)
+        .unwrap()
+        .put_object_stream_with_content_type(&mut reader, &storage_path, "image/png")
+        .await?;
+
+    let url = format!("https://mod-platform.fra1.cdn.digitaloceanspaces.com/{storage_path}");
+    Ok(url)
 }

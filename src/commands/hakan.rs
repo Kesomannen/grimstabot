@@ -16,8 +16,8 @@ pub async fn run(
     ctx: &Context,
     state: &AppState,
 ) -> anyhow::Result<()> {
-    let products = crate::hakan::get_products(state).await?;
-    let embed = crate::hakan::create_embed(&products);
+    let report = crate::hakan::create_report(state).await?;
+    let embed = crate::hakan::create_embed(&report);
 
     let msg = CreateInteractionResponseMessage::new().embed(embed);
     let response = CreateInteractionResponse::Message(msg);
