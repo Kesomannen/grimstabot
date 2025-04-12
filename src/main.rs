@@ -40,8 +40,8 @@ async fn main() {
 
     let state = grimstabot::AppState::new(db, *s3, http);
 
-    //let report = hakan::create_report(&state).await.unwrap();
-    //hakan::save_report(&report, &state).await.unwrap();
+    let report = hakan::create_report(&state).await.unwrap();
+    hakan::save_report(&report, &state).await.unwrap();
     //hakan::plot::create(&state).await.unwrap();
 
     let bot = grimstabot::Bot::new(state);
