@@ -1,0 +1,15 @@
+# fly.toml app configuration file generated for grimstabot on 2025-04-12T09:09:32+02:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'grimstabot'
+primary_region = 'arn'
+
+[build]
+
+[env]
+PLOTS_DIRECTORY = "/grimstabot_plots"
+
+[[vm]]
+  size = 'shared-cpu-1x'

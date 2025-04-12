@@ -1,11 +1,8 @@
-use std::{env, str::FromStr};
+use std::env;
 
 use grimstabot::hakan;
 use serenity::all::GatewayIntents;
-use sqlx::{
-    sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous},
-    SqlitePool,
-};
+use sqlx::PgPool;
 use tracing::info;
 
 #[tokio::main]
@@ -16,15 +13,9 @@ async fn main() {
 
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
-    let options = SqliteConnectOptions::from_str(&db_url)
-        .unwrap()
-        .journal_mode(SqliteJournalMode::Wal)
-        .synchronous(SqliteSynchronous::Normal)
-        .create_if_missing(true);
-
     info!(db_url, "connecting to database");
 
-    let db = SqlitePool::connect_with(options)
+    let db = PgPool::connect(&db_url)
         .await
         .expect("failed to connect to database");
 

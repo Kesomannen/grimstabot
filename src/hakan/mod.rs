@@ -1,23 +1,22 @@
 use std::{cmp::Ordering, collections::HashMap, fmt::Display, future::Future};
 
 use anyhow::{anyhow, Result};
-use chrono::Utc;
 use itertools::Itertools;
-use uuid::Uuid;
 
 use crate::AppState;
 
 mod coop;
+mod db;
 mod ica;
 pub mod plot;
 pub mod update;
 
 #[derive(Debug)]
 pub struct Ingredient {
-    pub id: i64,
+    pub id: i32,
     pub name: String,
     pub amount: f64,
-    pub coop_id: i64,
+    pub coop_id: i32,
     pub ica_category_name: String,
 }
 
@@ -28,12 +27,7 @@ pub struct Product {
     pub comparative_price: f64,
     pub comparative_price_text: String,
     pub url: String,
-}
-
-impl Product {
-    pub fn price(&self, ingredient: &Ingredient) -> f64 {
-        self.comparative_price * ingredient.amount
-    }
+    pub price: f64,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -61,8 +55,8 @@ impl Store {
 }
 
 pub struct Report {
-    pub ingredients: HashMap<i64, Ingredient>,
-    pub stores: HashMap<Store, HashMap<i64, Product>>,
+    pub ingredients: HashMap<i32, Ingredient>,
+    pub stores: HashMap<Store, HashMap<i32, Product>>,
 }
 
 impl Report {
@@ -75,14 +69,14 @@ impl Report {
             .map(|(store, products)| (*store, &products[&ingredient.id]))
     }
 
-    pub fn cheapest(&self) -> impl Iterator<Item = (&Ingredient, (Store, &Product))> {
+    pub fn cheapest(&self) -> impl Iterator<Item = (&Ingredient, Store, &Product)> {
         self.ingredients.values().map(|ingredient| {
-            (
-                ingredient,
-                self.products_by_ingredient(ingredient)
-                    .min_by(|(_, a), (_, b)| a.comparative_price.total_cmp(&b.comparative_price))
-                    .unwrap(),
-            )
+            let (store, product) = self
+                .products_by_ingredient(ingredient)
+                .min_by(|(_, a), (_, b)| a.comparative_price.total_cmp(&b.comparative_price))
+                .unwrap();
+
+            (ingredient, store, product)
         })
     }
 }
@@ -120,7 +114,7 @@ async fn create_store_report<'a, F, R, Fut>(
     reporter: F,
     ingredients: &'a [Ingredient],
     state: &'a AppState,
-) -> Result<HashMap<i64, Product>>
+) -> Result<HashMap<i32, Product>>
 where
     F: Fn(&'a Ingredient, &'a AppState) -> Fut,
     Fut: Future<Output = Result<R>>,
@@ -142,44 +136,6 @@ where
         result.insert(ingredient.id, product);
     }
     Ok(result)
-}
-
-pub fn create_embed(report: &Report) -> serenity::all::CreateEmbed {
-    let products = report
-        .cheapest()
-        .map(|(ingredient, (store, product))| {
-            (ingredient, store, product, product.price(ingredient))
-        })
-        .collect_vec();
-    let total_price: f64 = products.iter().map(|(_, _, _, price)| price).sum();
-
-    let fields = products
-        .iter()
-        .sorted_by(|(_, _, _, a), (_, _, _, b)| a.total_cmp(&b).reverse())
-        .map(|(ingredient, store, product, price)| {
-            (
-                format!("{} `{:0.1}kr`", ingredient.name, price),
-                format!(
-                    "{} [{} {}]({}) ({}{})",
-                    store,
-                    product.manufacturer_name,
-                    product.name,
-                    product.url,
-                    product.comparative_price,
-                    product.comparative_price_text,
-                ),
-                false,
-            )
-        });
-
-    serenity::all::CreateEmbed::new()
-        .title(format!("📈 Håkanbörsen 📈"))
-        .color(serenity::all::Color::DARK_GREEN)
-        .description(format!(
-            "<t:{}>\n# `{total_price:0.3}kr`",
-            Utc::now().timestamp()
-        ))
-        .fields(fields)
 }
 
 pub async fn save_report(report: &Report, state: &AppState) -> Result<()> {

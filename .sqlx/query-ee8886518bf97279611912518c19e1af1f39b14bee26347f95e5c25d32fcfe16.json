@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH p AS (\n    SELECT\n      products.store,\n      products.report_id,\n      (products.comparative_price * ingredients.amount) AS price\n    FROM products\n    JOIN ingredients\n      ON ingredients.id = products.ingredient_id\n)\nSELECT\n    reports.created_at,\n    p.store,\n    SUM(p.price) AS \"price!\"\nFROM reports\nJOIN p \n    ON p.report_id = reports.id\nGROUP BY p.store, reports.created_at\nORDER BY created_at ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 1,
+        "name": "store",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "price!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "ee8886518bf97279611912518c19e1af1f39b14bee26347f95e5c25d32fcfe16"
+}

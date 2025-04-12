@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use chrono::{Local, Timelike};
+use anyhow::Result;
 use serenity::{
-    all::{Command, Context, EventHandler, Http, Interaction, Ready},
+    all::{Context, EventHandler, GuildId, Http, Interaction, Ready},
     async_trait,
 };
-use tokio::time::Instant;
+use tokio_cron_scheduler::{Job, JobScheduler};
 use tracing::{error, info};
 
 mod commands;
@@ -13,13 +13,13 @@ pub mod hakan;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
-    db: sqlx::SqlitePool,
+    db: sqlx::PgPool,
     s3: s3::Bucket,
     http: reqwest::Client,
 }
 
 impl AppState {
-    pub fn new(db: sqlx::SqlitePool, s3: s3::Bucket, http: reqwest::Client) -> Self {
+    pub fn new(db: sqlx::PgPool, s3: s3::Bucket, http: reqwest::Client) -> Self {
         Self { db, s3, http }
     }
 }
@@ -37,14 +37,26 @@ impl Bot {
 #[async_trait]
 impl EventHandler for Bot {
     async fn ready(&self, ctx: Context, ready: Ready) {
+        /*
         if let Err(err) =
             Command::create_global_command(&ctx.http, commands::hakan::register()).await
         {
             error!("failed to register command: {err}");
         }
+        */
 
-        //send_hakan_update(&http, &db, &s3).await.unwrap();
-        tokio::spawn(hakan_loop_task(ctx.http.clone(), self.state.clone()));
+        let guild_id = GuildId::new(916599635001368616);
+
+        guild_id
+            .set_commands(&ctx.http, vec![commands::hakan::register()])
+            .await
+            .unwrap();
+
+        if let Err(err) = setup_hakan_chron_job(ctx.http.clone(), self.state.clone()).await {
+            error!("failed to start hakan chron job: {err:#}");
+        }
+
+        //hakan::update::send(&ctx.http, &self.state).await.unwrap();
 
         info!(username = ready.user.name, "ready");
     }
@@ -60,23 +72,25 @@ impl EventHandler for Bot {
     }
 }
 
-async fn hakan_loop_task(http: Arc<Http>, state: AppState) {
-    loop {
-        let now = Local::now();
-        let next_9am = if now.hour() < 9 {
-            now.date_naive().and_hms_opt(9, 0, 0).unwrap()
-        } else {
-            (now + chrono::Duration::days(1))
-                .date_naive()
-                .and_hms_opt(9, 0, 0)
-                .unwrap()
-        };
+async fn setup_hakan_chron_job(http: Arc<Http>, state: AppState) -> Result<()> {
+    let scheduler = JobScheduler::new().await?;
 
-        let duration_until = (next_9am - now.naive_local()).to_std().unwrap();
-        tokio::time::sleep_until(Instant::now() + duration_until).await;
+    let job = Job::new_async("0 0 7 * * *", move |_uuid, _l| {
+        let http = http.clone();
+        let state = state.clone();
 
-        if let Err(err) = hakan::update::send(&http, &state).await {
-            error!("failed to send hakan update: {err:#}");
-        }
-    }
+        Box::pin(async move {
+            info!("running daily hakan update");
+
+            if let Err(err) = hakan::update::send(&http, &state).await {
+                error!("failed to send hakan update: {err:#}");
+            }
+        })
+    })
+    .unwrap();
+
+    scheduler.add(job).await?;
+    scheduler.start().await?;
+
+    Ok(())
 }

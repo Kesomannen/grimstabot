@@ -252,6 +252,8 @@ pub async fn get_products(
     ingredient: &Ingredient,
     state: &AppState,
 ) -> Result<impl Iterator<Item = super::Product>> {
+    let amount = ingredient.amount;
+
     Ok(get_products_raw(
         &state.http,
         ingredient.coop_id as u32,
@@ -263,7 +265,18 @@ pub async fn get_products(
     )
     .await?
     .into_iter()
-    .map(|product| super::Product::from(product)))
+    .map(move |product| {
+        let url = product.url();
+
+        super::Product {
+            url,
+            name: product.name,
+            manufacturer_name: product.manufacturer_name,
+            comparative_price: product.comparative_price,
+            comparative_price_text: product.comparative_price_text,
+            price: product.comparative_price * amount,
+        }
+    }))
 }
 
 impl Product {
@@ -289,18 +302,5 @@ impl Product {
         url.push_str(&self.id.to_string());
 
         url
-    }
-}
-
-impl From<Product> for super::Product {
-    fn from(value: Product) -> Self {
-        let url = value.url();
-        super::Product {
-            name: value.name,
-            manufacturer_name: value.manufacturer_name,
-            comparative_price: value.comparative_price,
-            comparative_price_text: value.comparative_price_text,
-            url,
-        }
     }
 }

@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO products \n                (report_id, ingredient_id, name, manufacturer_name, comparative_price, comparative_price_text, url, store)\n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Text",
+        "Text",
+        "Float8",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2ebeed475b1afaa6c2dfc3599e1fa9e197261bd061a806055eac194f51cc26fc"
+}

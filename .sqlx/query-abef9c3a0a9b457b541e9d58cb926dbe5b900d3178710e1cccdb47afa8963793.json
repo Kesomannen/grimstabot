@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    reports.created_at,\n    SUM(p.price) AS \"price!\"\nFROM reports\nJOIN cheapest_products p\n    ON p.report_id = reports.id\nGROUP BY reports.created_at\nORDER BY created_at ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 1,
+        "name": "price!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "abef9c3a0a9b457b541e9d58cb926dbe5b900d3178710e1cccdb47afa8963793"
+}

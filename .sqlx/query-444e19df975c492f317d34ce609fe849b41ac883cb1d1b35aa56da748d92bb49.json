@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM ingredients",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "amount",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "coop_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "ica_category_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "444e19df975c492f317d34ce609fe849b41ac883cb1d1b35aa56da748d92bb49"
+}

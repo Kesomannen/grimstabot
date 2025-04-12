@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n\tp.name,\n    p.manufacturer_name,\n    p.comparative_price,\n    p.comparative_price_text,\n    p.url,\n    p.price,\n    ingredients.name AS ingredient_name\nFROM reports\nLEFT JOIN cheapest_products p\n\tON p.report_id = reports.id\nLEFT JOIN ingredients\n\tON p.ingredient_id = ingredients.id\nWHERE reports.created_at = (\n    SELECT MAX(created_at) FROM reports\n)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "manufacturer_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "comparative_price",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "comparative_price_text",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "price",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "ingredient_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "6612d08998939f91744d3e0036a9b403d4ff49f6e6bae239fa9bf1383aee8584"
+}

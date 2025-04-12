@@ -4,17 +4,20 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use http::{HeaderMap, HeaderValue};
 use itertools::Itertools;
-use plotters::prelude::*;
+use plotters::{
+    prelude::*,
+    style::full_palette::{ORANGE, PURPLE},
+};
 use uuid::Uuid;
 
 use crate::AppState;
 
-pub async fn create_total(state: &AppState) -> Result<PathBuf> {
+pub async fn create_total(state: &AppState) -> Result<String> {
     let path = get_path().await?;
-    let reports = fetch_reports(state).await?;
+    let reports = super::db::reports(state).await?;
 
     let last = reports.iter().last().unwrap();
 
@@ -30,13 +33,12 @@ pub async fn create_total(state: &AppState) -> Result<PathBuf> {
         .collect_vec();
 
     draw(vec![(color.into(), None, series)], &path, false)?;
-
-    Ok(path)
+    upload(path, state).await
 }
 
-pub async fn create_by_store(state: &AppState) -> Result<PathBuf> {
+pub async fn create_by_store(state: &AppState) -> Result<String> {
     let path = get_path().await?;
-    let reports = fetch_reports_by_store(state).await?;
+    let reports = super::db::reports_by_store(state).await?;
 
     let mut stores = HashMap::new();
 
@@ -61,8 +63,40 @@ pub async fn create_by_store(state: &AppState) -> Result<PathBuf> {
         .collect();
 
     draw(serieses, &path, true)?;
+    upload(path, state).await
+}
 
-    Ok(path)
+pub async fn create_by_ingredient(state: &AppState) -> Result<String> {
+    let path = get_path().await?;
+    let reports = super::db::reports_by_ingredient(state).await?;
+
+    let mut ingredients = HashMap::new();
+
+    for report in reports {
+        ingredients
+            .entry(report.ingredient_name)
+            .or_insert_with(|| Vec::new())
+            .push((report.created_at.and_utc(), report.price));
+    }
+
+    let serieses = ingredients
+        .into_iter()
+        .map(|(ingredient, values)| {
+            let color = match ingredient.as_str() {
+                "Vetemjöl" => RED,
+                "Kakao" => ORANGE,
+                "Ägg" => GREEN,
+                "Smör" => BLUE,
+                "Strösocker" => PURPLE,
+                _ => BLACK,
+            };
+
+            (color.into(), Some(ingredient), values)
+        })
+        .collect();
+
+    draw(serieses, &path, true)?;
+    upload(path, state).await
 }
 
 async fn get_path() -> Result<PathBuf> {
@@ -109,8 +143,6 @@ fn draw(
             .map(|(_, _, series)| max_float_iter(series.iter().map(|(_, value)| *value))),
     );
 
-    dbg!(&start_date, &end_date, &min_price, &max_price);
-
     let mut chart = ChartBuilder::on(&root)
         .set_label_area_size(LabelAreaPosition::Left, 60)
         .set_label_area_size(LabelAreaPosition::Bottom, 60)
@@ -138,7 +170,7 @@ fn draw(
     if draw_labels {
         chart
             .configure_series_labels()
-            .label_font(("sans-serif", 25))
+            .label_font(("sans-serif", 20))
             .border_style(BLACK)
             .draw()?;
     }
@@ -148,88 +180,10 @@ fn draw(
     Ok(())
 }
 
-struct Report {
-    created_at: NaiveDateTime,
-    price: f64,
-}
-
-async fn fetch_reports(state: &AppState) -> Result<Vec<Report>> {
-    let records = sqlx::query_as!(
-        Report,
-        r"
-WITH p AS (
-  WITH ranked_products AS (
-    SELECT
-      products.report_id,
-      (products.comparative_price * ingredients.amount) AS price,
-      ROW_NUMBER() OVER (
-        PARTITION BY products.report_id, products.ingredient_id
-        ORDER BY (products.comparative_price * ingredients.amount)
-      ) AS rn
-    FROM products
-    JOIN ingredients
-      ON ingredients.id = products.ingredient_id
-  )
-  SELECT
-  	price,
-    report_id
-  FROM ranked_products
-  WHERE rn = 1
-)
-SELECT
-    reports.created_at,
-    SUM(p.price) price
-FROM reports
-JOIN p 
-    ON p.report_id = reports.id
-GROUP BY reports.created_at
-ORDER BY created_at ASC",
-    )
-    .fetch_all(&state.db)
-    .await?;
-
-    Ok(records)
-}
-
-struct ReportWithStore {
-    created_at: NaiveDateTime,
-    price: f64,
-    store: String,
-}
-
-async fn fetch_reports_by_store(state: &AppState) -> Result<Vec<ReportWithStore>> {
-    let records = sqlx::query_as!(
-        ReportWithStore,
-        r"
-WITH p AS (
-    SELECT
-      products.store,
-      products.report_id,
-      (products.comparative_price * ingredients.amount) AS price
-    FROM products
-    JOIN ingredients
-      ON ingredients.id = products.ingredient_id
-)
-SELECT
-    reports.created_at,
-    SUM(p.price) price,
-    p.store
-FROM reports
-JOIN p 
-    ON p.report_id = reports.id
-GROUP BY p.store, reports.created_at
-ORDER BY created_at ASC",
-    )
-    .fetch_all(&state.db)
-    .await?;
-
-    Ok(records)
-}
-
-pub async fn upload(path: &Path, state: &AppState) -> Result<String> {
-    let file_name = path.file_name().unwrap().to_string_lossy();
+async fn upload(path: impl AsRef<Path>, state: &AppState) -> Result<String> {
+    let file_name = path.as_ref().file_name().unwrap().to_string_lossy();
     let storage_path = format!("plots/{file_name}");
-    let mut reader = tokio::fs::File::open(path).await?;
+    let mut reader = tokio::fs::File::open(&path).await?;
 
     let mut headers = HeaderMap::new();
     headers.insert("x-amz-acl", HeaderValue::from_static("public-read"));

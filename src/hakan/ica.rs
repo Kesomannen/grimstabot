@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use itertools::Itertools;
 use scraper::{Html, Selector};
-use uuid::Uuid;
 
 use crate::AppState;
 
@@ -9,10 +8,16 @@ use super::{Ingredient, Product};
 
 const STORE_ID: u32 = 1004554;
 
-async fn get_products_raw(category_name: &str, http: &reqwest::Client) -> Result<Vec<Product>> {
-    let url =
-        format!("https://handlaprivatkund.ica.se/stores/{STORE_ID}/categories/{category_name}");
-    let html = http
+pub async fn get_products(
+    ingredient: &Ingredient,
+    state: &AppState,
+) -> Result<impl Iterator<Item = Product>> {
+    let url = format!(
+        "https://handlaprivatkund.ica.se/stores/{STORE_ID}/categories/{}",
+        ingredient.ica_category_name
+    );
+    let html = state
+        .http
         .get(url)
         .send()
         .await?
@@ -44,7 +49,11 @@ async fn get_products_raw(category_name: &str, http: &reqwest::Client) -> Result
             .ok_or_else(|| anyhow!("invalid name format"))?
             .to_owned();
 
-        let name = split.intersperse(" ").collect();
+        let name = split
+            .filter(|part| part.chars().next().is_some_and(|part| !part.is_numeric()))
+            .intersperse(" ")
+            .collect();
+
         let href = name_ele
             .attr("href")
             .ok_or_else(|| anyhow!("name is missing href"))?;
@@ -62,7 +71,7 @@ async fn get_products_raw(category_name: &str, http: &reqwest::Client) -> Result
             .split_once('\u{a0}')
             .ok_or_else(|| anyhow!("invalid price format"))?;
 
-        let price: f64 = price
+        let comparative_price: f64 = price
             .trim()
             .replace(',', ".")
             .parse()
@@ -71,20 +80,12 @@ async fn get_products_raw(category_name: &str, http: &reqwest::Client) -> Result
         products.push(Product {
             name,
             manufacturer_name,
-            comparative_price: price,
+            comparative_price,
             comparative_price_text: price_text.into(),
             url,
+            price: comparative_price * ingredient.amount,
         });
     }
 
-    Ok(products)
-}
-
-pub async fn get_products(
-    ingredient: &Ingredient,
-    state: &AppState,
-) -> Result<impl Iterator<Item = Product>> {
-    Ok(get_products_raw(&ingredient.ica_category_name, &state.http)
-        .await?
-        .into_iter())
+    Ok(products.into_iter())
 }

@@ -1,16 +1,33 @@
+use anyhow::bail;
 use serenity::all::{
-    CommandInteraction, Context, CreateCommand, CreateEmbed, EditInteractionResponse,
-    InstallationContext,
+    colours::roles::DARK_GREEN, CommandInteraction, CommandOptionType, Context, CreateCommand,
+    CreateCommandOption, CreateEmbed, EditInteractionResponse, InstallationContext,
 };
 
 use crate::{hakan, AppState};
 
 pub fn register() -> CreateCommand {
-    CreateCommand::new("håkan")
-        .description("Skriv ut den nuvarande håkankursen")
+    CreateCommand::new("håkankurs")
+        .description("Visa håkankursen.")
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "total",
+            "Visa totalpris över tid.",
+        ))
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "butik",
+            "Visa totalpris per butik över tid.",
+        ))
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "ingrediens",
+            "Visa ingredienspris över tid.",
+        ))
         .add_integration_type(InstallationContext::User)
 }
 
+#[tracing::instrument]
 pub async fn run(
     interaction: CommandInteraction,
     ctx: &Context,
@@ -18,12 +35,27 @@ pub async fn run(
 ) -> anyhow::Result<()> {
     interaction.defer(&ctx.http).await?;
 
+    let command = &interaction.data.options[0].name;
+
     //let report = hakan::create_report(state).await?;
 
-    let plot_path = hakan::plot::create_by_store(state).await?;
-    let plot_url = hakan::plot::upload(&plot_path, state).await?;
+    let (title, plot_url) = match command.as_str() {
+        "total" => ("Håkankursen", hakan::plot::create_total(state).await?),
+        "butik" => (
+            "Håkankursen per butik",
+            hakan::plot::create_by_store(state).await?,
+        ),
+        "ingrediens" => (
+            "Håkankurs per ingrediens",
+            hakan::plot::create_by_ingredient(state).await?,
+        ),
+        _ => bail!("unknown subcommand"),
+    };
 
-    let embed = CreateEmbed::new().image(plot_url);
+    let embed = CreateEmbed::new()
+        .color(DARK_GREEN)
+        .title(title)
+        .image(plot_url);
 
     let response = EditInteractionResponse::new().add_embed(embed);
 
