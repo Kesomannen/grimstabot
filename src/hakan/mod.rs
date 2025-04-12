@@ -2,9 +2,11 @@ use std::{cmp::Ordering, collections::HashMap, fmt::Display, future::Future};
 
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
+use tracing::info;
 
 use crate::AppState;
 
+mod axfood;
 mod coop;
 mod db;
 mod ica;
@@ -18,6 +20,8 @@ pub struct Ingredient {
     pub amount: f64,
     pub coop_id: i32,
     pub ica_category_name: String,
+    pub willys_category_name: String,
+    pub hemkop_category_name: String,
 }
 
 #[derive(Debug)]
@@ -34,6 +38,8 @@ pub struct Product {
 pub enum Store {
     Coop,
     Ica,
+    Willys,
+    Hemkop,
 }
 
 impl Display for Store {
@@ -41,6 +47,8 @@ impl Display for Store {
         match self {
             Store::Coop => write!(f, "Coop"),
             Store::Ica => write!(f, "ICA"),
+            Store::Willys => write!(f, "Willy:s"),
+            Store::Hemkop => write!(f, "Hemköp"),
         }
     }
 }
@@ -50,6 +58,8 @@ impl Store {
         match self {
             Store::Coop => "coop",
             Store::Ica => "ica",
+            Store::Willys => "willys",
+            Store::Hemkop => "hemkop",
         }
     }
 }
@@ -88,14 +98,17 @@ pub async fn create_report(state: &AppState) -> Result<Report> {
 
     let mut stores = HashMap::new();
 
-    stores.insert(
-        Store::Coop,
-        create_store_report(coop::get_products, &ingredients, state).await?,
-    );
-    stores.insert(
-        Store::Ica,
-        create_store_report(ica::get_products, &ingredients, state).await?,
-    );
+    let (coop, ica, willys, hemkop) = tokio::try_join!(
+        store_report(coop::get_products, &ingredients, state),
+        store_report(ica::get_products, &ingredients, state),
+        store_report(axfood::get_willys_products, &ingredients, state),
+        store_report(axfood::get_hemkop_products, &ingredients, state),
+    )?;
+
+    stores.insert(Store::Coop, coop);
+    stores.insert(Store::Ica, ica);
+    stores.insert(Store::Willys, willys);
+    stores.insert(Store::Hemkop, hemkop);
 
     let ingredients = ingredients
         .into_iter()
@@ -110,7 +123,7 @@ pub async fn create_report(state: &AppState) -> Result<Report> {
     Ok(reports)
 }
 
-async fn create_store_report<'a, F, R, Fut>(
+async fn store_report<'a, F, R, Fut>(
     reporter: F,
     ingredients: &'a [Ingredient],
     state: &'a AppState,

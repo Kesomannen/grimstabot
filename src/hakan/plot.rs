@@ -9,7 +9,7 @@ use http::{HeaderMap, HeaderValue};
 use itertools::Itertools;
 use plotters::{
     prelude::*,
-    style::full_palette::{ORANGE, PURPLE},
+    style::full_palette::{ORANGE, PINK, PURPLE},
 };
 use uuid::Uuid;
 
@@ -55,6 +55,8 @@ pub async fn create_by_store(state: &AppState) -> Result<String> {
             let color = match store.as_str() {
                 "coop" => GREEN,
                 "ica" => RED,
+                "hemkop" => PINK,
+                "willys" => BLACK,
                 _ => BLACK,
             };
 
