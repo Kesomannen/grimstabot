@@ -186,8 +186,6 @@ async fn get_products_raw(
         .text()
         .await?;
 
-    tokio::fs::write(r"C:\Users\bobbo\Documents\willys.json", &text).await?;
-
     let res: Response = serde_json::from_str(&text)?;
 
     Ok(res.results)
