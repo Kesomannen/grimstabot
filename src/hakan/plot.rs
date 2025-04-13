@@ -57,6 +57,7 @@ pub async fn create_by_store(state: &AppState) -> Result<String> {
                 "ica" => RED,
                 "hemkop" => PINK,
                 "willys" => BLACK,
+                "mathem" => BLUE,
                 _ => BLACK,
             };
 

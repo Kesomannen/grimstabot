@@ -212,6 +212,8 @@ async fn get_products(
                 .parse()
                 .context("failed to parse compare price")?;
 
+            let comparative_price_text = format!("kr/{}", product.compare_price_unit);
+
             let url = format!(
                 "https://{base_url}/produkt/{}-{}",
                 product
@@ -228,7 +230,7 @@ async fn get_products(
                 name: product.name,
                 manufacturer_name: product.manufacturer,
                 comparative_price,
-                comparative_price_text: product.price_unit,
+                comparative_price_text,
                 price: comparative_price * amount,
             })
         })

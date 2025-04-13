@@ -42,7 +42,7 @@ pub async fn run(
     let (title, plot_url) = match command.as_str() {
         "total" => ("Håkankursen", hakan::plot::create_total(state).await?),
         "butik" => (
-            "Håkankursen per butik",
+            "Håkankurs per butik",
             hakan::plot::create_by_store(state).await?,
         ),
         "ingrediens" => (

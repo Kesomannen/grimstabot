@@ -10,6 +10,7 @@ mod axfood;
 mod coop;
 mod db;
 mod ica;
+mod mathem;
 pub mod plot;
 pub mod update;
 
@@ -22,6 +23,7 @@ pub struct Ingredient {
     pub ica_category_name: String,
     pub willys_category_name: String,
     pub hemkop_category_name: String,
+    pub mathem_category_name: String,
 }
 
 #[derive(Debug)]
@@ -40,6 +42,7 @@ pub enum Store {
     Ica,
     Willys,
     Hemkop,
+    Mathem,
 }
 
 impl Display for Store {
@@ -49,6 +52,7 @@ impl Display for Store {
             Store::Ica => write!(f, "ICA"),
             Store::Willys => write!(f, "Willy:s"),
             Store::Hemkop => write!(f, "Hemköp"),
+            Store::Mathem => write!(f, "Mathem"),
         }
     }
 }
@@ -60,6 +64,7 @@ impl Store {
             Store::Ica => "ica",
             Store::Willys => "willys",
             Store::Hemkop => "hemkop",
+            Store::Mathem => "mathem",
         }
     }
 }
@@ -98,29 +103,29 @@ pub async fn create_report(state: &AppState) -> Result<Report> {
 
     let mut stores = HashMap::new();
 
-    let (coop, ica, willys, hemkop) = tokio::try_join!(
+    let (coop, ica, willys, hemkop, mathem) = tokio::try_join!(
         store_report(coop::get_products, &ingredients, state),
         store_report(ica::get_products, &ingredients, state),
         store_report(axfood::get_willys_products, &ingredients, state),
         store_report(axfood::get_hemkop_products, &ingredients, state),
+        store_report(mathem::get_products, &ingredients, state),
     )?;
 
     stores.insert(Store::Coop, coop);
     stores.insert(Store::Ica, ica);
     stores.insert(Store::Willys, willys);
     stores.insert(Store::Hemkop, hemkop);
+    stores.insert(Store::Mathem, mathem);
 
     let ingredients = ingredients
         .into_iter()
         .map(|item| (item.id, item))
         .collect();
 
-    let reports = Report {
+    Ok(Report {
         stores,
         ingredients,
-    };
-
-    Ok(reports)
+    })
 }
 
 async fn store_report<'a, F, R, Fut>(
@@ -137,7 +142,15 @@ where
     for ingredient in ingredients {
         let product = reporter(ingredient, state)
             .await?
-            .filter(|product| product.name.starts_with(&ingredient.name))
+            .filter(|product| {
+                let first_word = product
+                    .name
+                    .split_once(' ')
+                    .map(|(word, _)| word)
+                    .unwrap_or(&product.name);
+
+                first_word == ingredient.name
+            })
             .sorted_by(|a, b| {
                 a.comparative_price
                     .partial_cmp(&b.comparative_price)
