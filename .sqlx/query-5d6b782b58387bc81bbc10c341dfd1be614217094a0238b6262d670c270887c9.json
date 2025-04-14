@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n  ingredients.name AS ingredient_name,\n  reports.created_at,\n  MIN(products.comparative_price) * amount AS \"price!\"\nFROM ingredients\nLEFT JOIN products\n\tON products.ingredient_id = ingredients.id\nLEFT JOIN reports\n\tON products.report_id = reports.id\nGROUP BY \n    ingredient_id, \n    report_id, \n    ingredients.name, \n    reports.created_at, \n    ingredients.amount\nORDER BY created_at ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ingredient_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 2,
+        "name": "price!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "5d6b782b58387bc81bbc10c341dfd1be614217094a0238b6262d670c270887c9"
+}
