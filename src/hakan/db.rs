@@ -88,7 +88,8 @@ GROUP BY
     report_id, 
     ingredients.name, 
     reports.created_at, 
-    ingredients.amount"#,
+    ingredients.amount
+ORDER BY created_at ASC"#,
     )
     .fetch_all(&state.db)
     .await?;

@@ -74,6 +74,10 @@ pub async fn get_products(
 
         let comparative_price_text = price_text.replace('\u{2009}', "");
 
+        if !comparative_price_text.contains('/') {
+            continue;
+        }
+
         let href = name_ele.attr("href").context("name is missing href")?;
         let url = format!("https://www.mathem.se{href}");
 
