@@ -24,6 +24,11 @@ pub fn register() -> CreateCommand {
             "ingrediens",
             "Visa ingredienspris över tid.",
         ))
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "uppdatera",
+            "Uppdatera håkankursen med den senaste datan och skicka en rapport.",
+        ))
         .add_integration_type(InstallationContext::User)
 }
 
@@ -49,6 +54,9 @@ pub async fn run(
             "Håkankurs per ingrediens",
             hakan::plot::create_by_ingredient(state).await?,
         ),
+        "uppdatera" => {
+            return hakan::update::send(&ctx.http, state).await;
+        }
         _ => bail!("unknown subcommand"),
     };
 
