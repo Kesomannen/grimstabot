@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::HashMap, fmt::Display, future::Future};
 
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
-use tracing::info;
+use tracing::{error, info};
 
 use crate::AppState;
 
@@ -18,6 +18,7 @@ pub mod update;
 pub struct Ingredient {
     pub id: i32,
     pub name: String,
+    pub aliases: String,
     pub amount: f64,
     pub coop_id: i32,
     pub ica_category_name: String,
@@ -103,19 +104,19 @@ pub async fn create_report(state: &AppState) -> Result<Report> {
 
     let mut stores = HashMap::new();
 
-    let (coop, ica, willys, hemkop, mathem) = tokio::try_join!(
-        store_report(coop::get_products, &ingredients, state),
-        store_report(ica::get_products, &ingredients, state),
-        store_report(axfood::get_willys_products, &ingredients, state),
-        store_report(axfood::get_hemkop_products, &ingredients, state),
-        store_report(mathem::get_products, &ingredients, state),
-    )?;
+    let (coop, ica, willys, hemkop, mathem) = tokio::join!(
+        create_store_report(coop::get_products, &ingredients, state),
+        create_store_report(ica::get_products, &ingredients, state),
+        create_store_report(axfood::get_willys_products, &ingredients, state),
+        create_store_report(axfood::get_hemkop_products, &ingredients, state),
+        create_store_report(mathem::get_products, &ingredients, state),
+    );
 
-    stores.insert(Store::Coop, coop);
-    stores.insert(Store::Ica, ica);
-    stores.insert(Store::Willys, willys);
-    stores.insert(Store::Hemkop, hemkop);
-    stores.insert(Store::Mathem, mathem);
+    insert_store_report(&mut stores, Store::Coop, coop);
+    insert_store_report(&mut stores, Store::Ica, ica);
+    insert_store_report(&mut stores, Store::Willys, willys);
+    insert_store_report(&mut stores, Store::Hemkop, hemkop);
+    insert_store_report(&mut stores, Store::Mathem, mathem);
 
     let ingredients = ingredients
         .into_iter()
@@ -128,7 +129,7 @@ pub async fn create_report(state: &AppState) -> Result<Report> {
     })
 }
 
-async fn store_report<'a, F, R, Fut>(
+async fn create_store_report<'a, F, R, Fut>(
     reporter: F,
     ingredients: &'a [Ingredient],
     state: &'a AppState,
@@ -150,6 +151,10 @@ where
                     .unwrap_or(&product.name);
 
                 first_word == ingredient.name
+                    || ingredient
+                        .aliases
+                        .split(',')
+                        .any(|alias| first_word == alias)
             })
             .sorted_by(|a, b| {
                 a.comparative_price
@@ -157,11 +162,24 @@ where
                     .unwrap_or(Ordering::Equal)
             })
             .next()
-            .ok_or_else(|| anyhow!("no products found"))?;
+            .ok_or_else(|| anyhow!("no products found for {}", ingredient.name))?;
 
         result.insert(ingredient.id, product);
     }
     Ok(result)
+}
+
+fn insert_store_report(
+    map: &mut HashMap<Store, HashMap<i32, Product>>,
+    store: Store,
+    res: Result<HashMap<i32, Product>>,
+) {
+    match res {
+        Ok(products) => {
+            map.insert(store, products);
+        }
+        Err(err) => error!(store = store.id(), "failed to create report: {err:#}"),
+    }
 }
 
 pub async fn save_report(report: &Report, state: &AppState) -> Result<()> {

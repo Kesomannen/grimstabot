@@ -42,7 +42,7 @@ async fn main() {
 
     //let report = hakan::create_report(&state).await.unwrap();
     //hakan::save_report(&report, &state).await.unwrap();
-    //hakan::plot::create_by_ingredient(&state).await.unwrap();
+    //hakan::plot::create_by_store(&state).await.unwrap();
 
     let bot = grimstabot::Bot::new(state);
 
