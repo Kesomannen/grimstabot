@@ -40,8 +40,6 @@ pub async fn run(
 ) -> anyhow::Result<()> {
     interaction.defer(&ctx.http).await?;
 
-    bail!("aaaaaaaaaaaaaaaa");
-
     let command = &interaction.data.options[0].name;
 
     //let report = hakan::create_report(state).await?;

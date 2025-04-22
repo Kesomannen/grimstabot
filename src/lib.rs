@@ -72,7 +72,7 @@ impl EventHandler for Bot {
                 let response = CreateEmbed::new()
                     .color(Color::RED)
                     .title("An error occured!")
-                    .description(format!("{err:#?}"));
+                    .description(format!("`{err:#}`"));
 
                 command
                     .edit_response(
