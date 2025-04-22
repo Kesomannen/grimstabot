@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use anyhow::Result;
 use chrono::Utc;
 use itertools::Itertools;
-use serenity::all::{ChannelId, Color, CreateEmbed, CreateMessage, Http, RoleId};
+use serenity::all::{ChannelId, Color, CreateEmbed, CreateMessage, Http, Message, RoleId};
 
 use crate::AppState;
 
@@ -11,7 +11,7 @@ const UPDATE_CHANNEL: ChannelId = ChannelId::new(1359621010726326432);
 const UPDATE_PING_ROLE: RoleId = RoleId::new(1359807749780930570);
 
 #[tracing::instrument]
-pub async fn send(http: &Http, state: &AppState) -> Result<()> {
+pub async fn send(http: &Http, state: &AppState) -> Result<Message> {
     let report = super::create_report(state).await?;
     let last_report = super::db::last_products(state).await?;
 
@@ -67,7 +67,7 @@ pub async fn send(http: &Http, state: &AppState) -> Result<()> {
         .fields(fields)
         .image(url);
 
-    UPDATE_CHANNEL
+    let msg = UPDATE_CHANNEL
         .send_message(
             http,
             CreateMessage::new()
@@ -76,7 +76,7 @@ pub async fn send(http: &Http, state: &AppState) -> Result<()> {
         )
         .await?;
 
-    Ok(())
+    Ok(msg)
 }
 
 fn get_emoji(ord: Ordering) -> &'static str {
