@@ -7,7 +7,7 @@ use serenity::all::{ChannelId, Color, CreateEmbed, CreateMessage, Http, Message,
 
 use crate::AppState;
 
-const UPDATE_CHANNEL: ChannelId = ChannelId::new(1359621010726326432);
+pub const UPDATE_CHANNEL: ChannelId = ChannelId::new(1359621010726326432);
 const UPDATE_PING_ROLE: RoleId = RoleId::new(1359807749780930570);
 
 #[tracing::instrument]

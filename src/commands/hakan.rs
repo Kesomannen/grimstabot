@@ -55,9 +55,11 @@ pub async fn run(
             hakan::plot::create_by_ingredient(state).await?,
         ),
         "uppdatera" => {
-            let msg = hakan::update::send(&ctx.http, state).await?;
-            let response = EditInteractionResponse::new()
-                .content(format!("☀️ Uppdatering klar! Se <#{}>.", msg.id));
+            let _ = hakan::update::send(&ctx.http, state).await?;
+            let response = EditInteractionResponse::new().content(format!(
+                "☀️ Uppdatering klar! Se <#{}>.",
+                hakan::update::UPDATE_CHANNEL
+            ));
             interaction.edit_response(&ctx.http, response).await?;
 
             return Ok(());
