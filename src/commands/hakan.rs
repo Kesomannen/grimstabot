@@ -34,11 +34,13 @@ pub fn register() -> CreateCommand {
 
 #[tracing::instrument]
 pub async fn run(
-    interaction: CommandInteraction,
+    interaction: &CommandInteraction,
     ctx: &Context,
     state: &AppState,
 ) -> anyhow::Result<()> {
     interaction.defer(&ctx.http).await?;
+
+    bail!("aaaaaaaaaaaaaaaa");
 
     let command = &interaction.data.options[0].name;
 

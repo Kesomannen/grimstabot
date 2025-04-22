@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use serenity::{
-    all::{Context, EventHandler, GuildId, Http, Interaction, Ready},
+    all::{
+        Color, Command, Context, CreateEmbed, EditInteractionResponse, EventHandler, GuildId, Http,
+        Interaction, Ready,
+    },
     async_trait,
 };
 use tokio_cron_scheduler::{Job, JobScheduler};
@@ -37,13 +40,11 @@ impl Bot {
 #[async_trait]
 impl EventHandler for Bot {
     async fn ready(&self, ctx: Context, ready: Ready) {
-        /*
         if let Err(err) =
             Command::create_global_command(&ctx.http, commands::hakan::register()).await
         {
             error!("failed to register command: {err}");
         }
-        */
 
         let guild_id = GuildId::new(916599635001368616);
 
@@ -65,8 +66,21 @@ impl EventHandler for Bot {
         if let Interaction::Command(command) = interaction {
             info!(name = command.data.name, "received command interaction");
 
-            if let Err(err) = commands::hakan::run(command, &ctx, &self.state).await {
-                error!("failed to handle command: {err}");
+            if let Err(err) = commands::hakan::run(&command, &ctx, &self.state).await {
+                error!("failed to handle command: {err:#}");
+
+                let response = CreateEmbed::new()
+                    .color(Color::RED)
+                    .title("An error occured!")
+                    .description(format!("{err:#?}"));
+
+                command
+                    .edit_response(
+                        &ctx.http,
+                        EditInteractionResponse::new().add_embed(response),
+                    )
+                    .await
+                    .ok();
             }
         }
     }
