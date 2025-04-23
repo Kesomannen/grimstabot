@@ -1,6 +1,5 @@
 use std::env;
 
-use grimstabot::hakan;
 use serenity::all::GatewayIntents;
 use sqlx::PgPool;
 use tracing::info;

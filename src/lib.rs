@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serenity::{
     all::{
         Color, Command, Context, CreateEmbed, EditInteractionResponse, EventHandler, GuildId, Http,
@@ -37,21 +37,29 @@ impl Bot {
     }
 }
 
+const GUILD_ID: GuildId = GuildId::new(916599635001368616);
+
 #[async_trait]
 impl EventHandler for Bot {
     async fn ready(&self, ctx: Context, ready: Ready) {
-        if let Err(err) =
-            Command::create_global_command(&ctx.http, commands::hakan::register()).await
-        {
-            error!("failed to register command: {err}");
+        let commands = [
+            commands::hakan::stock::register(),
+            commands::hakan::role::register(),
+            commands::hakan::recipe::register(),
+        ];
+
+        for command in commands {
+            if let Err(err) = Command::create_global_command(&ctx.http, command).await {
+                error!("failed to register command: {err}");
+            }
         }
 
-        let guild_id = GuildId::new(916599635001368616);
-
+        /*
         guild_id
-            .set_commands(&ctx.http, vec![commands::hakan::register()])
+            .set_commands(&ctx.http, vec![commands::hakan::stock::register()])
             .await
             .unwrap();
+        */
 
         if let Err(err) = setup_hakan_chron_job(ctx.http.clone(), self.state.clone()).await {
             error!("failed to start hakan chron job: {err:#}");
@@ -66,7 +74,14 @@ impl EventHandler for Bot {
         if let Interaction::Command(command) = interaction {
             info!(name = command.data.name, "received command interaction");
 
-            if let Err(err) = commands::hakan::run(&command, &ctx, &self.state).await {
+            let res = match command.data.name.as_str() {
+                "håkankurs" => commands::hakan::stock::run(&command, &ctx, &self.state).await,
+                "älskahåkan" => commands::hakan::role::run(&command, &ctx, &self.state).await,
+                "håkanrecept" => commands::hakan::recipe::run(&command, &ctx, &self.state).await,
+                _ => Err(anyhow!("unknown command name")),
+            };
+
+            if let Err(err) = res {
                 error!("failed to handle command: {err:#}");
 
                 let response = CreateEmbed::new()
