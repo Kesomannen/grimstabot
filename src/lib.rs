@@ -49,11 +49,13 @@ impl EventHandler for Bot {
             commands::hakan::wr::register(),
         ];
 
+        /*
         for command in commands {
             if let Err(err) = Command::delete_global_command(&ctx.http, command).await {
                 error!("failed to register command: {err}");
             }
         }
+        */
 
         GUILD
             .set_commands(&ctx.http, vec![commands::hakan::stock::register()])
