@@ -42,25 +42,22 @@ const GUILD: GuildId = GuildId::new(916599635001368616);
 #[async_trait]
 impl EventHandler for Bot {
     async fn ready(&self, ctx: Context, ready: Ready) {
-        let commands = [
+        let commands = vec![
             commands::hakan::stock::register(),
             commands::hakan::role::register(),
             commands::hakan::recipe::register(),
             commands::hakan::wr::register(),
         ];
 
-        /*
-        for command in commands {
-            if let Err(err) = Command::delete_global_command(&ctx.http, command).await {
+        let global_commands = Command::get_global_commands(&ctx.http).await.unwrap();
+
+        for command in global_commands {
+            if let Err(err) = Command::delete_global_command(&ctx.http, command.id).await {
                 error!("failed to register command: {err}");
             }
         }
-        */
 
-        GUILD
-            .set_commands(&ctx.http, vec![commands::hakan::stock::register()])
-            .await
-            .unwrap();
+        GUILD.set_commands(&ctx.http, commands).await.unwrap();
 
         if let Err(err) = setup_hakan_chron_job(ctx.http.clone(), self.state.clone()).await {
             error!("failed to start hakan chron job: {err:#}");
