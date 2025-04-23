@@ -58,7 +58,7 @@ pub async fn run(
             let _ = hakan::update::send(&ctx.http, state).await?;
             let response = EditInteractionResponse::new().content(format!(
                 "☀️ Uppdatering klar! Se <#{}>.",
-                hakan::update::UPDATE_CHANNEL
+                hakan::update::CHANNEL
             ));
             interaction.edit_response(&ctx.http, response).await?;
 

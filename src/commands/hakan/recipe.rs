@@ -1,12 +1,12 @@
 use serenity::all::{
     Color, CommandInteraction, Context, CreateCommand, CreateEmbed, CreateInteractionResponse,
-    CreateInteractionResponseMessage, RoleId,
+    CreateInteractionResponseMessage,
 };
 
 use crate::AppState;
 
 pub fn register() -> CreateCommand {
-    CreateCommand::new("håkanrecept").description("Visa håkanreceptet.")
+    CreateCommand::new("håkanrecept").description("Visa det officiella receptet på håkan.")
 }
 
 const RECIPE: &'static str = "
@@ -43,7 +43,7 @@ pub async fn run(
             CreateInteractionResponse::Message(
                 CreateInteractionResponseMessage::new().add_embed(
                     CreateEmbed::new()
-                        .title("🍰 Håkanrecept")
+                        .title("🍰 Håkans smaskiga chokladkaka 📄")
                         .color(Color::DARK_GREEN)
                         .description(RECIPE),
                 ),

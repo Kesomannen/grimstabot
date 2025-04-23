@@ -1,16 +1,14 @@
 use serenity::all::{
-    CommandInteraction, Context, CreateCommand, CreateInteractionResponse,
+    Color, CommandInteraction, Context, CreateCommand, CreateEmbed, CreateInteractionResponse,
     CreateInteractionResponseMessage, RoleId,
 };
 
-use crate::AppState;
+use crate::{hakan, AppState};
 
 pub fn register() -> CreateCommand {
-    CreateCommand::new("älskahåkan")
-        .description("Få håkanälskarrollen eller ta bort den från dig själv.")
+    CreateCommand::new("håkanroll")
+        .description("Få rollen för håkanälskare eller ta bort den från dig själv.")
 }
-
-const ROLE_ID: RoleId = RoleId::new(1359807749780930570);
 
 #[tracing::instrument]
 pub async fn run(
@@ -18,28 +16,33 @@ pub async fn run(
     ctx: &Context,
     state: &AppState,
 ) -> anyhow::Result<()> {
-    let member = crate::GUILD_ID
-        .member(&ctx.http, interaction.user.id)
-        .await?;
+    let member = crate::GUILD.member(&ctx.http, interaction.user.id).await?;
 
     let has_role = interaction
         .user
-        .has_role(&ctx.http, crate::GUILD_ID, ROLE_ID)
+        .has_role(&ctx.http, crate::GUILD, hakan::update::PING_ROLE)
         .await?;
 
-    let response = if has_role {
-        member.remove_role(&ctx.http, ROLE_ID).await?;
-        "💔💔 NEEEEEJ!"
+    let (title, description) = if has_role {
+        member
+            .remove_role(&ctx.http, hakan::update::PING_ROLE)
+            .await?;
+        ("💔 NEEEEJ!! 😭", "Tog bort din håkanälskarroll.")
     } else {
-        member.add_role(&ctx.http, ROLE_ID).await?;
-        "☀️😊 Välkommen!"
+        member.add_role(&ctx.http, hakan::update::PING_ROLE).await?;
+        ("☀️ Välkommen! 😊", "La till håkanälskarrollen.")
     };
+
+    let embed = CreateEmbed::new()
+        .title(title)
+        .description(description)
+        .color(Color::DARK_GREEN);
 
     interaction
         .create_response(
             &ctx.http,
             CreateInteractionResponse::Message(
-                CreateInteractionResponseMessage::new().content(response),
+                CreateInteractionResponseMessage::new().embed(embed),
             ),
         )
         .await?;

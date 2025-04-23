@@ -37,7 +37,7 @@ impl Bot {
     }
 }
 
-const GUILD_ID: GuildId = GuildId::new(916599635001368616);
+const GUILD: GuildId = GuildId::new(916599635001368616);
 
 #[async_trait]
 impl EventHandler for Bot {
@@ -46,6 +46,7 @@ impl EventHandler for Bot {
             commands::hakan::stock::register(),
             commands::hakan::role::register(),
             commands::hakan::recipe::register(),
+            commands::hakan::wr::register(),
         ];
 
         for command in commands {
@@ -76,8 +77,9 @@ impl EventHandler for Bot {
 
             let res = match command.data.name.as_str() {
                 "håkankurs" => commands::hakan::stock::run(&command, &ctx, &self.state).await,
-                "älskahåkan" => commands::hakan::role::run(&command, &ctx, &self.state).await,
+                "håkanroll" => commands::hakan::role::run(&command, &ctx, &self.state).await,
                 "håkanrecept" => commands::hakan::recipe::run(&command, &ctx, &self.state).await,
+                "håkanrekord" => commands::hakan::wr::run(&command, &ctx, &self.state).await,
                 _ => Err(anyhow!("unknown command name")),
             };
 

@@ -7,8 +7,8 @@ use serenity::all::{ChannelId, Color, CreateEmbed, CreateMessage, Http, Message,
 
 use crate::AppState;
 
-pub const UPDATE_CHANNEL: ChannelId = ChannelId::new(1359621010726326432);
-const UPDATE_PING_ROLE: RoleId = RoleId::new(1359807749780930570);
+pub const CHANNEL: ChannelId = ChannelId::new(1359621010726326432);
+pub const PING_ROLE: RoleId = RoleId::new(1359807749780930570);
 
 #[tracing::instrument]
 pub async fn send(http: &Http, state: &AppState) -> Result<Message> {
@@ -67,11 +67,11 @@ pub async fn send(http: &Http, state: &AppState) -> Result<Message> {
         .fields(fields)
         .image(url);
 
-    let msg = UPDATE_CHANNEL
+    let msg = CHANNEL
         .send_message(
             http,
             CreateMessage::new()
-                .content(format!("<@&{UPDATE_PING_ROLE}>"))
+                .content(format!("<@&{PING_ROLE}>"))
                 .add_embed(embed),
         )
         .await?;
