@@ -50,17 +50,15 @@ impl EventHandler for Bot {
         ];
 
         for command in commands {
-            if let Err(err) = Command::create_global_command(&ctx.http, command).await {
+            if let Err(err) = Command::delete_global_command(&ctx.http, command).await {
                 error!("failed to register command: {err}");
             }
         }
 
-        /*
-        guild_id
+        GUILD
             .set_commands(&ctx.http, vec![commands::hakan::stock::register()])
             .await
             .unwrap();
-        */
 
         if let Err(err) = setup_hakan_chron_job(ctx.http.clone(), self.state.clone()).await {
             error!("failed to start hakan chron job: {err:#}");
