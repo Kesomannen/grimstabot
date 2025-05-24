@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use serenity::{
     all::{
-        Color, Command, Context, CreateEmbed, EditInteractionResponse, EventHandler, GuildId, Http,
+        Color, Context, CreateEmbed, EditInteractionResponse, EventHandler, GuildId, Http,
         Interaction, Ready,
     },
     async_trait,
@@ -13,17 +13,18 @@ use tracing::{error, info};
 
 mod commands;
 pub mod hakan;
+pub mod storage;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
     db: sqlx::PgPool,
-    s3: s3::Bucket,
+    storage: storage::Client,
     http: reqwest::Client,
 }
 
 impl AppState {
-    pub fn new(db: sqlx::PgPool, s3: s3::Bucket, http: reqwest::Client) -> Self {
-        Self { db, s3, http }
+    pub fn new(db: sqlx::PgPool, storage: storage::Client, http: reqwest::Client) -> Self {
+        Self { db, storage, http }
     }
 }
 
@@ -49,6 +50,7 @@ impl EventHandler for Bot {
             commands::hakan::wr::register(),
         ];
 
+        /*
         let global_commands = Command::get_global_commands(&ctx.http).await.unwrap();
 
         for command in global_commands {
@@ -56,6 +58,7 @@ impl EventHandler for Bot {
                 error!("failed to register command: {err}");
             }
         }
+        */
 
         GUILD.set_commands(&ctx.http, commands).await.unwrap();
 

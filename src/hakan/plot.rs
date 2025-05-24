@@ -185,21 +185,13 @@ fn draw(
 
 async fn upload(path: impl AsRef<Path>, state: &AppState) -> Result<String> {
     let file_name = path.as_ref().file_name().unwrap().to_string_lossy();
-    let storage_path = format!("plots/{file_name}");
-    let mut reader = tokio::fs::File::open(&path).await?;
+    let storage_key = format!("plots/{file_name}");
 
-    let mut headers = HeaderMap::new();
-    headers.insert("x-amz-acl", HeaderValue::from_static("public-read"));
+    let data = tokio::fs::read(&path).await?;
+    state.storage.upload(&storage_key, data, true).await?;
 
-    state
-        .s3
-        .with_extra_headers(headers)
-        .unwrap()
-        .put_object_stream_with_content_type(&mut reader, &storage_path, "image/png")
-        .await?;
-
-    let url = format!("https://mod-platform.fra1.cdn.digitaloceanspaces.com/{storage_path}");
     tokio::fs::remove_file(path).await?;
+    let url = state.storage.object_url(storage_key);
     Ok(url)
 }
 

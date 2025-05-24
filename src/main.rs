@@ -23,13 +23,6 @@ async fn main() {
         .await
         .expect("failed to run database migrations");
 
-    let s3 = s3::Bucket::new(
-        "mod-platform",
-        s3::Region::DoFra1,
-        s3::creds::Credentials::from_env().expect("failed to create s3 credentials"),
-    )
-    .expect("failed to connect to s3 bucket");
-
     let http = reqwest::Client::builder()
         .user_agent(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0",
@@ -37,7 +30,16 @@ async fn main() {
         .build()
         .expect("failed to build reqwest");
 
-    let state = grimstabot::AppState::new(db, *s3, http);
+    let api_key = env::var("SUPABASE_API_KEY").expect("SUPABASE_API_KEY must be set");
+
+    let storage = grimstabot::storage::Client::new(
+        "grimstabot".into(),
+        api_key.into(),
+        "https://fmqmtfvzpddscjxkntgn.supabase.co/storage/v1".into(),
+        http.clone(),
+    );
+
+    let state = grimstabot::AppState::new(db, storage, http);
 
     //let report = hakan::create_report(&state).await.unwrap();
     //hakan::save_report(&report, &state).await.unwrap();

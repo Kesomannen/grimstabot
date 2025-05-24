@@ -21,7 +21,6 @@ convert_case = "0.8.0"
 sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-rustls", "chrono"] }
 plotters = "0.3.7"
 uuid = { version = "1.16.0", features = ["serde", "v4"] }
-rust-s3 = "0.35.1"
 http = "0.2"
 scraper = "0.23.1"
 tokio-cron-scheduler = "0.9"
