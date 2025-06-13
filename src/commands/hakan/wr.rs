@@ -10,10 +10,9 @@ pub fn register() -> CreateCommand {
         .description("Visa det nuvarande världsrekordet för håkan-speedrunning.")
 }
 
-const WR_TIME: &str = "6:25";
-const WR_VIDEO: &str = "https://www.youtube.com/watch?v=VrIUSd15P6E";
-const WR_AUTHOR: &str = "Bo, Bertil, Sixten och Olle Rodin";
-const WR_DATE: u64 = 1721426400;
+const WR_TIME: &str = "5:59";
+const WR_AUTHOR: &str = "Bo, Bertil och Sixten Rodin";
+const WR_DATE: u64 = 1749463200;
 
 #[tracing::instrument]
 pub async fn run(
@@ -30,9 +29,7 @@ pub async fn run(
         .create_response(
             &ctx.http,
             CreateInteractionResponse::Message(
-                CreateInteractionResponseMessage::new()
-                    .content(WR_VIDEO)
-                    .embed(embed),
+                CreateInteractionResponseMessage::new().embed(embed),
             ),
         )
         .await?;
