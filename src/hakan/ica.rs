@@ -25,9 +25,9 @@ pub async fn get_products(
         .text()
         .await?;
 
-    let product_selector = Selector::parse(".sc-filq44-0").unwrap();
+    let product_selector = Selector::parse(".sc-eiQriw.fGFfef").unwrap();
     let name_selector = Selector::parse("._link-standalone_v2p9r_8").unwrap();
-    let amount_selector = Selector::parse(".kUYwXM").unwrap();
+    let price_selector = Selector::parse(".sc-crhfPb.ecaCju").unwrap();
 
     let document = Html::parse_document(&html);
 
@@ -40,8 +40,9 @@ pub async fn get_products(
             .ok_or_else(|| anyhow!("product name element is missing"))?;
 
         let full_name = name_ele
-            .attr("aria-label")
-            .ok_or_else(|| anyhow!("name element aria-label is missing"))?;
+            .text()
+            .next()
+            .ok_or_else(|| anyhow!("name element is missing text"))?;
 
         let mut split = full_name.split(' ');
         let manufacturer_name = split
@@ -60,13 +61,13 @@ pub async fn get_products(
         let url = format!("https://handlaprivatkund.ica.se{href}");
 
         let price_ele = product_ele
-            .select(&amount_selector)
+            .select(&price_selector)
             .next()
-            .ok_or_else(|| anyhow!("amount element missing"))?;
+            .ok_or_else(|| anyhow!("price element is missing"))?;
 
         let (price, price_text) = price_ele
             .text()
-            .nth(1)
+            .nth(2)
             .ok_or_else(|| anyhow!("price element is missing text"))?
             .split_once('\u{a0}')
             .ok_or_else(|| anyhow!("invalid price format"))?;
