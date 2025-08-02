@@ -25,9 +25,9 @@ pub async fn get_products(
         .text()
         .await?;
 
-    let product_selector = Selector::parse(".sc-eiQriw.fGFfef").unwrap();
+    let product_selector = Selector::parse(".sc-eiQriw").unwrap();
     let name_selector = Selector::parse("._link-standalone_v2p9r_8").unwrap();
-    let price_selector = Selector::parse(".sc-crhfPb.ecaCju").unwrap();
+    let price_selector = Selector::parse(".sc-crhfPb").unwrap();
 
     let document = Html::parse_document(&html);
 

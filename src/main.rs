@@ -1,5 +1,6 @@
 use std::env;
 
+use grimstabot::hakan;
 use serenity::all::GatewayIntents;
 use sqlx::PgPool;
 use tracing::info;
@@ -41,9 +42,9 @@ async fn main() {
 
     let state = grimstabot::AppState::new(db, storage, http);
 
-    //let report = hakan::create_report(&state).await.unwrap();
-    //hakan::save_report(&report, &state).await.unwrap();
-    //hakan::plot::create_by_store(&state).await.unwrap();
+    let report = hakan::create_report(&state).await.unwrap();
+    hakan::save_report(&report, &state).await.unwrap();
+    hakan::plot::create_by_store(&state).await.unwrap();
 
     let bot = grimstabot::Bot::new(state);
 

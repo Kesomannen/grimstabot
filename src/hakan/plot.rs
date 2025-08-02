@@ -5,7 +5,6 @@ use std::{
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use http::{HeaderMap, HeaderValue};
 use itertools::Itertools;
 use plotters::{
     prelude::*,
