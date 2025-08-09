@@ -16,6 +16,7 @@ pub async fn get_products(
         "https://handlaprivatkund.ica.se/stores/{STORE_ID}/categories/{}",
         ingredient.ica_category_name
     );
+
     let html = state
         .http
         .get(url)
@@ -25,9 +26,9 @@ pub async fn get_products(
         .text()
         .await?;
 
-    let product_selector = Selector::parse(".sc-eiQriw").unwrap();
+    let product_selector = Selector::parse(".sc-fuTSoq").unwrap();
     let name_selector = Selector::parse("._link-standalone_v2p9r_8").unwrap();
-    let price_selector = Selector::parse(".sc-crhfPb").unwrap();
+    let price_selector = Selector::parse(".sc-fHCFno").unwrap();
 
     let document = Html::parse_document(&html);
 
@@ -69,7 +70,7 @@ pub async fn get_products(
             .text()
             .nth(2)
             .ok_or_else(|| anyhow!("price element is missing text"))?
-            .split_once('\u{a0}')
+            .split_once(' ')
             .ok_or_else(|| anyhow!("invalid price format"))?;
 
         let comparative_price: f64 = price

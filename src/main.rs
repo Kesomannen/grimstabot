@@ -42,19 +42,21 @@ async fn main() {
 
     let state = grimstabot::AppState::new(db, storage, http);
 
-    let report = hakan::create_report(&state).await.unwrap();
-    hakan::save_report(&report, &state).await.unwrap();
-    hakan::plot::create_by_store(&state).await.unwrap();
+    if env::args().nth(1).as_deref() == Some("--test") {
+        let report = hakan::create_report(&state).await.unwrap();
+        hakan::save_report(&report, &state).await.unwrap();
+        hakan::plot::create_by_store(&state).await.unwrap();
+    } else {
+        let bot = grimstabot::Bot::new(state);
 
-    let bot = grimstabot::Bot::new(state);
+        let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN must be set");
+        let intents = GatewayIntents::non_privileged();
 
-    let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN must be set");
-    let intents = GatewayIntents::non_privileged();
+        let mut client = serenity::Client::builder(token, intents)
+            .event_handler(bot)
+            .await
+            .expect("error while starting client");
 
-    let mut client = serenity::Client::builder(token, intents)
-        .event_handler(bot)
-        .await
-        .expect("error while starting client");
-
-    client.start().await.unwrap()
+        client.start().await.unwrap()
+    }
 }
