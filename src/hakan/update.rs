@@ -33,7 +33,11 @@ pub async fn send(http: &Http, state: &AppState) -> Result<Message> {
             let last_ord = last_report
                 .iter()
                 .find(|(name, _)| *name == ingredient.name)
-                .map(|(_, last_product)| product.price.total_cmp(&last_product.price))
+                .map(|(_, last_product)| {
+                    product
+                        .comparative_price
+                        .total_cmp(&last_product.comparative_price)
+                })
                 .unwrap_or(Ordering::Equal);
 
             (
@@ -41,7 +45,7 @@ pub async fn send(http: &Http, state: &AppState) -> Result<Message> {
                     "{}{} `{:0.1}kr`",
                     get_emoji(last_ord),
                     ingredient.name,
-                    product.price
+                    product.comparative_price * ingredient.amount
                 ),
                 format!(
                     "[{} {}]({}) ({}) ({}{})",
