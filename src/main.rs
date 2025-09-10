@@ -1,6 +1,7 @@
 use std::env;
 
 use grimstabot::hakan;
+use itertools::Itertools;
 use serenity::all::GatewayIntents;
 use sqlx::PgPool;
 use tracing::info;
@@ -44,8 +45,20 @@ async fn main() {
 
     if env::args().nth(1).as_deref() == Some("--test") {
         let report = hakan::create_report(&state).await.unwrap();
+        let last_report = hakan::db::last_products(&state).await.unwrap();
         hakan::save_report(&report, &state).await.unwrap();
-        hakan::plot::create_by_store(&state, true).await.unwrap();
+        //hakan::plot::create_by_store(&state, true).await.unwrap();
+
+        //hakan::plot::create_total(&state, true).await.unwrap();
+        let last_total_price: f64 = last_report.iter().map(|(_, product)| product.price).sum();
+
+        let cheapest_products = report.cheapest().collect_vec();
+        let total_price: f64 = cheapest_products
+            .iter()
+            .map(|(ingredient, _, product)| product.comparative_price * ingredient.amount)
+            .sum();
+
+        dbg!(last_total_price, cheapest_products, total_price);
     } else {
         let bot = grimstabot::Bot::new(state);
 

@@ -8,7 +8,7 @@ use crate::AppState;
 
 mod axfood;
 mod coop;
-mod db;
+pub mod db;
 mod ica;
 mod mathem;
 pub mod plot;

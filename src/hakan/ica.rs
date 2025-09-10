@@ -181,7 +181,7 @@ pub async fn get_products(
 
         let comparative_price_text = match product.price.unit.label.as_str() {
             "fop.price.per.kg" => "kr/kg",
-            "fop.price.per.each" => "kr/str",
+            "fop.price.per.each" => "kr/st",
             label => bail!("unknown unit price label: {label}"),
         }
         .to_string();

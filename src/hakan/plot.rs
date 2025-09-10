@@ -161,7 +161,7 @@ fn draw(
 
     for (color, label, values) in serieses {
         let series = chart
-            .draw_series(LineSeries::new(values, color).point_size(3))?
+            .draw_series(LineSeries::new(values, color))?
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], color));
 
         if let Some(label) = label {
