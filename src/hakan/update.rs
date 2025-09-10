@@ -28,7 +28,11 @@ pub async fn send(http: &Http, state: &AppState) -> Result<Message> {
 
     let fields = cheapest_products
         .iter()
-        .sorted_by(|(_, _, a), (_, _, b)| a.price.total_cmp(&b.price).reverse())
+        .sorted_by(|(a_ingredient, _, a), (b_ingredient, _, b)| {
+            (a.comparative_price * a_ingredient.amount)
+                .total_cmp(&(b.comparative_price * b_ingredient.amount))
+                .reverse()
+        })
         .map(|(ingredient, store, product)| {
             let last_ord = last_report
                 .iter()
