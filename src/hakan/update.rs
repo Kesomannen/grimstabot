@@ -23,7 +23,7 @@ pub async fn send(http: &Http, state: &AppState) -> Result<Message> {
     let cheapest_products = report.cheapest().collect_vec();
     let total_price: f64 = cheapest_products
         .iter()
-        .map(|(_, _, product)| product.price)
+        .map(|(ingredient, _, product)| product.comparative_price * ingredient.amount)
         .sum();
 
     let fields = cheapest_products

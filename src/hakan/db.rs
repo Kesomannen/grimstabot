@@ -16,10 +16,12 @@ pub async fn reports(state: &AppState) -> Result<Vec<Report>> {
         r#"
 SELECT
     reports.created_at,
-    SUM(p.price) AS "price!"
+    SUM(p.comparative_price * i.amount) AS "price!"
 FROM reports
 JOIN cheapest_products p
     ON p.report_id = reports.id
+JOIN ingredients i
+    ON p.ingredient_id = i.id
 GROUP BY reports.created_at
 ORDER BY created_at ASC"#,
     )
