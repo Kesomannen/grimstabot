@@ -17,7 +17,7 @@ pub async fn send(http: &Http, state: &AppState) -> Result<Message> {
 
     super::save_report(&report, state).await?;
 
-    let url = super::plot::create_total(state).await?;
+    let url = super::plot::create_total(state, false).await?;
     let last_total_price: f64 = last_report.iter().map(|(_, product)| product.price).sum();
 
     let cheapest_products = report.cheapest().collect_vec();

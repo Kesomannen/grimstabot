@@ -45,14 +45,17 @@ pub async fn run(
     //let report = hakan::create_report(state).await?;
 
     let (title, plot_url) = match command.as_str() {
-        "total" => ("Håkankursen", hakan::plot::create_total(state).await?),
+        "total" => (
+            "Håkankursen",
+            hakan::plot::create_total(state, false).await?,
+        ),
         "butik" => (
             "Håkankurs per butik",
-            hakan::plot::create_by_store(state).await?,
+            hakan::plot::create_by_store(state, false).await?,
         ),
         "ingrediens" => (
             "Håkankurs per ingrediens",
-            hakan::plot::create_by_ingredient(state).await?,
+            hakan::plot::create_by_ingredient(state, false).await?,
         ),
         "uppdatera" => {
             let _ = hakan::update::send(&ctx.http, state).await?;

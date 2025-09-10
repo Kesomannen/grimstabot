@@ -45,7 +45,7 @@ async fn main() {
     if env::args().nth(1).as_deref() == Some("--test") {
         let report = hakan::create_report(&state).await.unwrap();
         hakan::save_report(&report, &state).await.unwrap();
-        hakan::plot::create_by_store(&state).await.unwrap();
+        hakan::plot::create_by_store(&state, true).await.unwrap();
     } else {
         let bot = grimstabot::Bot::new(state);
 

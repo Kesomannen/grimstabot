@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 use crate::AppState;
 
-pub async fn create_total(state: &AppState) -> Result<String> {
+pub async fn create_total(state: &AppState, keep: bool) -> Result<String> {
     let path = get_path().await?;
     let reports = super::db::reports(state).await?;
 
@@ -32,10 +32,10 @@ pub async fn create_total(state: &AppState) -> Result<String> {
         .collect_vec();
 
     draw(vec![(color.into(), None, series)], &path, false)?;
-    upload(path, state).await
+    upload(path, state, keep).await
 }
 
-pub async fn create_by_store(state: &AppState) -> Result<String> {
+pub async fn create_by_store(state: &AppState, keep: bool) -> Result<String> {
     let path = get_path().await?;
     let reports = super::db::reports_by_store(state).await?;
 
@@ -65,10 +65,10 @@ pub async fn create_by_store(state: &AppState) -> Result<String> {
         .collect();
 
     draw(serieses, &path, true)?;
-    upload(path, state).await
+    upload(path, state, keep).await
 }
 
-pub async fn create_by_ingredient(state: &AppState) -> Result<String> {
+pub async fn create_by_ingredient(state: &AppState, keep: bool) -> Result<String> {
     let path = get_path().await?;
     let reports = super::db::reports_by_ingredient(state).await?;
 
@@ -98,7 +98,7 @@ pub async fn create_by_ingredient(state: &AppState) -> Result<String> {
         .collect();
 
     draw(serieses, &path, true)?;
-    upload(path, state).await
+    upload(path, state, keep).await
 }
 
 async fn get_path() -> Result<PathBuf> {
@@ -182,14 +182,16 @@ fn draw(
     Ok(())
 }
 
-async fn upload(path: impl AsRef<Path>, state: &AppState) -> Result<String> {
+async fn upload(path: impl AsRef<Path>, state: &AppState, keep: bool) -> Result<String> {
     let file_name = path.as_ref().file_name().unwrap().to_string_lossy();
     let storage_key = format!("plots/{file_name}");
 
     let data = tokio::fs::read(&path).await?;
     state.storage.upload(&storage_key, data, true).await?;
 
-    tokio::fs::remove_file(path).await?;
+    if !keep {
+        tokio::fs::remove_file(path).await?;
+    }
     let url = state.storage.object_url(storage_key);
     Ok(url)
 }
