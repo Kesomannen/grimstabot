@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    reports.created_at,\n    SUM(p.price) AS \"price!\"\nFROM reports\nJOIN cheapest_products p\n    ON p.report_id = reports.id\nGROUP BY reports.created_at\nORDER BY created_at ASC",
+  "query": "\nSELECT\n    reports.created_at,\n    SUM(p.comparative_price * i.amount) AS \"price!\"\nFROM reports\nJOIN cheapest_products p\n    ON p.report_id = reports.id\nJOIN ingredients i\n    ON p.ingredient_id = i.id\nGROUP BY reports.created_at\nORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -22,5 +22,5 @@
       null
     ]
   },
-  "hash": "abef9c3a0a9b457b541e9d58cb926dbe5b900d3178710e1cccdb47afa8963793"
+  "hash": "f45d33222e8a04253ff439bf29e27bf5dbca15590d4b07d1ced750b4a9e0a63b"
 }
