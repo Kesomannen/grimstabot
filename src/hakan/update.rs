@@ -23,25 +23,17 @@ pub async fn send(http: &Http, state: &AppState) -> Result<Message> {
     let cheapest_products = report.cheapest().collect_vec();
     let total_price: f64 = cheapest_products
         .iter()
-        .map(|(ingredient, _, product)| product.comparative_price * ingredient.amount)
+        .map(|(_, _, product)| product.price)
         .sum();
 
     let fields = cheapest_products
         .iter()
-        .sorted_by(|(a_ingredient, _, a), (b_ingredient, _, b)| {
-            (a.comparative_price * a_ingredient.amount)
-                .total_cmp(&(b.comparative_price * b_ingredient.amount))
-                .reverse()
-        })
+        .sorted_by(|(_, _, a), (_, _, b)| a.price.total_cmp(&b.price).reverse())
         .map(|(ingredient, store, product)| {
             let last_ord = last_report
                 .iter()
                 .find(|(name, _)| *name == ingredient.name)
-                .map(|(_, last_product)| {
-                    product
-                        .comparative_price
-                        .total_cmp(&last_product.comparative_price)
-                })
+                .map(|(_, last_product)| product.price.total_cmp(&last_product.price))
                 .unwrap_or(Ordering::Equal);
 
             (
@@ -49,7 +41,7 @@ pub async fn send(http: &Http, state: &AppState) -> Result<Message> {
                     "{}{} `{:0.1}kr`",
                     get_emoji(last_ord),
                     ingredient.name,
-                    product.comparative_price * ingredient.amount
+                    product.price
                 ),
                 format!(
                     "[{} {}]({}) ({}) ({}{})",

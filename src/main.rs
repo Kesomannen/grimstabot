@@ -55,7 +55,7 @@ async fn main() {
         let cheapest_products = report.cheapest().collect_vec();
         let total_price: f64 = cheapest_products
             .iter()
-            .map(|(ingredient, _, product)| product.comparative_price * ingredient.amount)
+            .map(|(_, _, product)| product.price)
             .sum();
 
         dbg!(last_total_price, cheapest_products, total_price);

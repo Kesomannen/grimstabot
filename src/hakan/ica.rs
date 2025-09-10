@@ -177,7 +177,6 @@ pub async fn get_products(
 
     let products = result.entities.product.into_iter().map(|(_, product)| {
         let comparative_price = product.price.unit.current.amount.parse()?;
-        let price = product.price.current.amount.parse()?;
 
         let comparative_price_text = match product.price.unit.label.as_str() {
             "fop.price.per.kg" => "kr/kg",
@@ -195,7 +194,7 @@ pub async fn get_products(
         Ok(Product {
             comparative_price,
             comparative_price_text,
-            price,
+            price: ingredient.amount * comparative_price,
             name: product.name,
             manufacturer_name: product.brand,
             url,
