@@ -19,6 +19,8 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
 
+      - uses: Swatinem/rust-cache@v2
+
       - name: Build
         run: cargo build --verbose
 
@@ -28,7 +30,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "target/release/discord-bot"
+          source: "target/release/grimstabot"
           target: "~/prod/grimstabot/grimstabot"
 
       # - name: Restart systemd service
@@ -39,4 +41,4 @@ jobs:
       #     key: ${{ secrets.SERVER_SSH_KEY }}
       #     script: |
       #       systemctl --user daemon-reexec
-      #       systemctl --user restart discord-bot
+      #       systemctl --user restart grimstabot
