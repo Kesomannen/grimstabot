@@ -22,7 +22,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --verbose
+        run: cargo build --release --verbose
 
       - name: Upload binary to server
         uses: appleboy/scp-action@v0.1.7
