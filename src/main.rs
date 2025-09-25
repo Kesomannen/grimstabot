@@ -49,7 +49,7 @@ async fn main() {
         hakan::save_report(&report, &state).await.unwrap();
         //hakan::plot::create_by_store(&state, true).await.unwrap();
 
-        hakan::plot::create_total(&state, true).await.unwrap();
+        hakan::plot::create_by_store(&state, true).await.unwrap();
         let last_total_price: f64 = last_report.iter().map(|(_, product)| product.price).sum();
 
         let cheapest_products = report.cheapest().collect_vec();

@@ -74,7 +74,6 @@ struct Offer {
     #[serde(rename = "type")]
     offer_type: OfferType,
     presentation_mode: PresentationMode,
-    limit_reached: bool,
     required_product_quantity: Option<i32>,
 }
 
