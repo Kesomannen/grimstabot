@@ -33,7 +33,7 @@ jobs:
           source: "target/release/grimstabot"
           target: "~/prod/grimstabot"
           overwrite: true
-          strip_components: 2
+          strip_components: 1
 
       # - name: Restart systemd service
       #   uses: appleboy/ssh-action@v1.0.3
