@@ -32,6 +32,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "target/release/grimstabot"
           target: "~/prod/grimstabot"
+          overwrite: true
+          strip_components: 2
 
       # - name: Restart systemd service
       #   uses: appleboy/ssh-action@v1.0.3
