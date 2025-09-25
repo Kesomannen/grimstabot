@@ -31,7 +31,7 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "target/release/grimstabot"
-          target: "~/prod/grimstabot/grimstabot"
+          target: "~/prod/grimstabot"
 
       # - name: Restart systemd service
       #   uses: appleboy/ssh-action@v1.0.3
