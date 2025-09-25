@@ -254,12 +254,11 @@ pub async fn get_hemkop_products(
     ingredient: &Ingredient,
     state: &AppState,
 ) -> Result<impl Iterator<Item = super::Product>> {
-    Ok(get_products(
+    get_products(
         ingredient.amount,
         &ingredient.hemkop_category_name,
         "www.hemkop.se",
         state,
     )
-    .await?
-    .filter(|product| !product.name.to_lowercase().contains("raps")))
+    .await
 }
